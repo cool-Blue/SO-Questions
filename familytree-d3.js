@@ -338,10 +338,10 @@ var familytree = (function () {
             }
         },
         sizeXY: function (d) {
-            return [20,24,28,32,36,40,44,48,52,10][d.significance];
+            return [20, 20,24,28,32,36,40,44,48,52,10][d.significance];
         },
         posXY: function (d) {
-            return [-10, -12, -14, -16, -18, -20, -22, -24, -26, -10][d.significance];
+            return [-10, -10, -12, -14, -16, -18, -20, -22, -24, -26, -10][d.significance];
         },
         colourRace: function (d) {
             switch ((d.race)) {
