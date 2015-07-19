@@ -23,7 +23,7 @@ var familytree = (function () {
         },
         createGraph: function (newJSON) {
             if (alreadyThere) {
-                svg.remove();
+                //svg.remove();
                 nodeCircles = {};
             }
             this.updateForceUsingNewNodes(this.generateObjects(newJSON));
@@ -34,7 +34,7 @@ var familytree = (function () {
             alreadyThere = true;
         },
         updateGraph: function (newJSON) {
-            svg.remove();
+            //svg.remove();
             this.findDuplicatesAndSetEmpty(newJSON);
             this.deleteEmptyObjectsInJSON(newJSON);
             currentJSON = currentJSON.concat(newJSON);
@@ -60,7 +60,8 @@ var familytree = (function () {
             }
         },
         updateGraphByRemoveElement: function (clickedNode, index) {
-            svg.remove();
+            // remove links from or to clicked node
+            //svg.remove();
             var json4Splicing = currentJSON;
             for (var i = 0; i < json4Splicing.length; i++) {
                 if (json4Splicing[i].source.ID == clickedNode.ID) {
@@ -153,91 +154,98 @@ var familytree = (function () {
                 d.fixed = e.shiftKey || d.fixed;
             });
 
-            var varsvgMarker = svg.append("svg:defs").selectAll("marker")
-                .data(["end"])
-                .enter();
+            var varsvgMarker = svg.selectAll("defs")
+                .data([["end"]])
+                .enter().append("defs")
+                    .selectAll("marker")
+                    .data(id)
+                    .enter();
             this.createMarker(varsvgMarker);
 
-            container = svg.append("g");
+            container = svg.selectAll("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
+            container.enter().append("g").attr("id", "container");
 
-            link = container.append("g")
-                .attr("class", "links")
-                .selectAll(".link")
-                .data(force.links())
-                .enter().append("line")
-                .attr("class", function (d) {
-                    if (d.relation == "BEGETS") {
-                        return "linkBEGETS";
-                    }
-                    if (d.relation == "LOVES") {
-                        return "linkLOVES";
-                    }
-                    if (d.relation == "HASSIBLING") {
-                        return "linkHASSIBLING";
-                    }
-                })
-                .attr("marker-end", function (d) {
-                    if (d.relation == "BEGETS") {
-                        switch (d.targetSign) {
-                            case 1: return "url(#end1)"; break;
-                            case 2: return "url(#end2)"; break;
-                            case 3: return "url(#end3)"; break;
-                            case 4: return "url(#end4)"; break;
-                            case 5: return "url(#end5)"; break;
-                            case 6: return "url(#end6)"; break;
-                            case 7: return "url(#end7)"; break;
-                            case 8: return "url(#end8)"; break;
-                            case 9: return "url(#end9)"; break;
-                            default:
-                                return "url(#end1)";
+            var links = container.selectAll(".links").data(function(d){return d.links});
+                links.enter().append("g").attr("class", "links");
+
+                link = links.selectAll("line").data(id);
+                link.enter().append("line")/*.attr("class", "link")*/;
+                link.exit().remove();
+                link.attr("class", function (d) {
+                        if (d.relation == "BEGETS") {
+                            return "linkBEGETS";
                         }
-                        /*if (d.targetName == "Eldarion") {
-                            return "url(#end2)";
-                        } else {
-                            return "url(#end1)";
+                        if (d.relation == "LOVES") {
+                            return "linkLOVES";
+                        }
+                        if (d.relation == "HASSIBLING") {
+                            return "linkHASSIBLING";
+                        }
+                    })
+                    .attr("marker-end", function (d) {
+                        if (d.relation == "BEGETS") {
+                            switch (d.targetSign) {
+                                case 1: return "url(#end1)"; break;
+                                case 2: return "url(#end2)"; break;
+                                case 3: return "url(#end3)"; break;
+                                case 4: return "url(#end4)"; break;
+                                case 5: return "url(#end5)"; break;
+                                case 6: return "url(#end6)"; break;
+                                case 7: return "url(#end7)"; break;
+                                case 8: return "url(#end8)"; break;
+                                case 9: return "url(#end9)"; break;
+                                default:
+                                    return "url(#end1)";
+                            }
+                            /*if (d.targetName == "Eldarion") {
+                                return "url(#end2)";
+                            } else {
+                                return "url(#end1)";
+                            }*/
+                        }
+                        /*if (d.relation == "LOVES") {
+                            return "";
                         }*/
-                    }
-                    /*if (d.relation == "LOVES") {
-                        return "";
-                    }*/
-                });
+                    });
 
-            node = container.append("g")
-                .attr("class", "nodes")
-                .selectAll(".node")
-                .data(force.nodes())
-                .enter().append("g")
-                .attr("class", "node")
-                .on("mouseover", this.mouseover)
-                .on("mouseout", this.mouseout)
-                //.on("click", function (d) {
-                //    familytree.click(d);
-                //})
-                .on("dblclick", function (d) {
-                    familytree.dblclick(d);
-                })
-                .on('contextmenu', function (data, index) {
-                    d3.event.preventDefault();
-                    familytree.updateGraphByRemoveElement(data, index);
-                })
-                .call(force.drag);
-            node
+            var nodes = container.selectAll(".nodes").data(function(d){return d.nodes});
+                nodes.enter().append("g").attr("class", "nodes");
+
+                node = nodes.selectAll(".node").data(id);
+            var newNode = node.enter().append("g").attr("class", "node");
+                node.exit().remove();
+                node.on("mouseover", this.mouseover)
+                    .on("mouseout", this.mouseout)
+                    //.on("click", function (d) {
+                    //    familytree.click(d);
+                    //})
+                    .on("dblclick", function (d) {
+                        familytree.dblclick(d);
+                    })
+                    .on('contextmenu', function (data, index) {
+                        d3.event.preventDefault();
+                        familytree.updateGraphByRemoveElement(data, index);
+                    })
+                    .call(force.drag);
+            newNode
                 .append("circle")
-                .attr("class", "bgcircle")
+                .attr("class", "bgcircle");
+            node.select("circle")
                 .attr("r", function (d) {
                     return Math.abs(familytree.posXY(d));
                 })
-                .attr("cx", 0)
-                .attr("cy", 0)
+                //.attr("cx", 0)
+                //.attr("cy", 0)
                 .style("fill", function (d) {
                     return familytree.colourRace(d);
                 })
                 .style("stroke", function (d) {
                     return familytree.colourRace(d);
                 });
-            node
+            newNode
                 .append("svg:image")
-                .attr("class", "circle")
+                .attr("class", "circle");
+            node.select("image")
                 .attr("xlink:href", function (d) {
                     return "/pics/arda/creature/" + d.uniquename + "_familytree.png";
                 })
@@ -256,7 +264,7 @@ var familytree = (function () {
                 .on("error", function () {
                     d3.select(this).style("visibility", "hidden");
                 });
-            node
+            newNode
                 .append("text")
                 .attr("class", "nodetext")
                 .attr("x", function (d) {
@@ -330,52 +338,10 @@ var familytree = (function () {
             }
         },
         sizeXY: function (d) {
-            switch (d.significance) {
-                case 1:
-                    return 20; break;
-                case 2:
-                    return 24; break;
-                case 3:
-                    return 28; break;
-                case 4:
-                    return 32; break;
-                case 5:
-                    return 36; break;
-                case 6:
-                    return 40; break;
-                case 7:
-                    return 44; break;
-                case 8:
-                    return 48; break;
-                case 9:
-                    return 52; break;
-                default:
-                    return 10; break;
-            }
+            return [20,24,28,32,36,40,44,48,52,10][d.significance];
         },
         posXY: function (d) {
-            switch ((d.significance)) {
-                case 1:
-                    return -10; break;
-                case 2:
-                    return -12; break;
-                case 3:
-                    return -14; break;
-                case 4:
-                    return -16; break;
-                case 5:
-                    return -18; break;
-                case 6:
-                    return -20; break;
-                case 7:
-                    return -22; break;
-                case 8:
-                    return -24; break;
-                case 9:
-                    return -26; break;
-                default:
-                    return -10; break;
-            }
+            return [-10, -12, -14, -16, -18, -20, -22, -24, -26, -10][d.significance];
         },
         colourRace: function (d) {
             switch ((d.race)) {
