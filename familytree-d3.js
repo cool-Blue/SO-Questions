@@ -207,7 +207,7 @@ var familytree = (function () {
 						node = nodes.selectAll(".node").data(id);
 						var newNode = node.enter().append("g").attr("class", "node");
 						node.exit().remove();
-						node.on("mouseover", this.mouseover)
+						newNode.on("mouseover", this.mouseover)
 							.on("mouseout", this.mouseout)
 							//.on("click", function (d) {
 							//    familytree.click(d);
@@ -257,7 +257,8 @@ var familytree = (function () {
 							});
 						newNode
 							.append("text")
-							.attr("class", "nodetext")
+							.attr("class", "nodetext");
+						node.select("text")
 							.attr("x", function (d) {
 								return Math.abs(familytree.posXY(d) - 5);
 							})
