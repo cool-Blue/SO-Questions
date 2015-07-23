@@ -5,29 +5,30 @@ var familytree = (function () {
     var force = d3.layout.force();
     var zoom;
     var width = 1200, height = 900;
-    var currentJSON;
+    var initJSON, currentJSON;
     var container;
-    //var zoom = d3.behavior.zoom().scaleExtent([0.4, 4]);
-    //var drag = force.drag();
     var scale = 1;
     var trans = "0,0";
 
     return {
         cleanPresentation: function () {
-					nodeCircles = {};
+					//nodeCircles = {};
 					force.nodes([]);
 					force.links([]);
 					familytree.initializeGraph();
-					alreadyThere = false;
+					//alreadyThere = false;
         },
         getAlreadyThere: function () {
             return alreadyThere;
         },
         createGraph: function (newJSON) {
             if (alreadyThere) {
-                nodeCircles = {};
+                //nodeCircles = {};
+                this.updateForce(this.generateObjects(currentJSON = JSON.parse(initJSON)));
+                return;
             }
-            this.updateForceUsingNewNodes(this.generateObjects(newJSON));
+            initJSON = JSON.stringify(newJSON);
+            this.updateForce(this.generateObjects(newJSON));
             currentJSON = newJSON;
             alreadyThere = true;
         },
@@ -35,7 +36,7 @@ var familytree = (function () {
             this.findDuplicatesAndSetEmpty(newJSON);
             this.deleteEmptyObjectsInJSON(newJSON);
             currentJSON = currentJSON.concat(newJSON);
-            this.updateForceUsingNewNodes(this.generateObjects(currentJSON));
+            this.updateForce(this.generateObjects(currentJSON));
         },
         findDuplicatesAndSetEmpty: function (newJSON) {
             for (var i = 0; i < currentJSON.length; i++) {
@@ -69,7 +70,7 @@ var familytree = (function () {
             familytree.deleteEmptyObjectsInJSON(json4Splicing);
             familytree.deleteNode(force.nodes(), clickedNode);
             currentJSON = json4Splicing;
-            familytree.updateForceRemoveElement(familytree.generateObjects(currentJSON));
+            familytree.updateForce(familytree.generateObjects(currentJSON));
         },
         deleteNode: function (allNodes, clickedNode) {
             allNodes.forEach(function (node) {
@@ -89,22 +90,40 @@ var familytree = (function () {
         generateObjects: function (json) {
             json.forEach(function (link) {
                 if (typeof(link.source) == "string") {
-                    link.source = nodeCircles[link.source] || (nodeCircles[link.source] = {name: link.sourceName, significance: link.sourceSign, uniquename: link.sourceUName, ID: link.source, class: link.sourceClass, relation: link.relation, race: link.sourceRace, linkCount: 0});
+                    link.source = nodeCircles[link.source] || (
+                        nodeCircles[link.source] = {
+                            name: link.sourceName,
+                            significance: link.sourceSign,
+                            uniquename: link.sourceUName,
+                            ID: link.source,
+                            class: link.sourceClass,
+                            relation: link.relation,
+                            race: link.sourceRace,
+                            linkCount: 0
+                        }
+                      );
                     link.source.linkCount++;
                 }
                 if (typeof(link.target) == "string") {
-                    link.target = nodeCircles[link.target] || (nodeCircles[link.target] = {name: link.targetName, significance: link.targetSign, uniquename: link.targetUName, ID: link.target, class: link.targetClass, relation: link.relation, race: link.targetRace, linkCount: 0});
+                    link.target = nodeCircles[link.target] || (
+                        nodeCircles[link.target] = {
+                          name: link.targetName,
+                          significance: link.targetSign,
+                          uniquename: link.targetUName,
+                          ID: link.target,
+                          class: link.targetClass,
+                          relation: link.relation,
+                          race: link.targetRace,
+                          linkCount: 0}
+                      );
                     link.target.linkCount++;
                 }
             });
             return json;
         },
-        updateForceRemoveElement: function (links) {
+        updateForce: function (links) {
 					updateData(links, force, nodeCircles)
 				},
-        updateForceUsingNewNodes: function (links) {
-					updateData(links, force, nodeCircles)
-        },
         initializeGraph: (function(){
 					force
 						.size([width, height])
