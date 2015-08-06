@@ -1,0 +1,29 @@
+41f89fa9b807699f7d0eeeb7a47fec1c60a55b80
+orientdb.js
+getFamilytreeSingle
+- This queries the db for the selected net and returns it: works fine
+- Then the sub-net is returned to familytree-d3.js
+ - findDuplicatesAndSetEmpty checks if the subnet nodes are already in the main net and, if they are, deletes them from the sub-net
+ - then the remaining nodes on the sub-net are concatinated onto the main net.
+ - if the main net already contains the selected net the end result is nothing
+
+getFamilytreeAll2
+- added this version with the call-back specified by the caller: #seperation of concerns principle
+
+- issues:
+ - this module should not make the decision about familytree.getAlreadyThere(): violates Shy principle
+
+
+familytree-d3.js
+- updateGraphByRemoveElement
+ - json4Splicing does not do anything, just use currentJason
+
+- initializeGraph
+ - moved .attr("xlink:href",  and .on("error", from node to newNode
+ - add indexing function to ensure nodes have the same href
+  - add imgHref as a seperate function so can use it as index as well as for making the node href
+
+- showAll
+ - use getFamilytreeAll2 with callback
+ - can eliminate the decision in familytree.js and there, just call familytree.createGraph
+
