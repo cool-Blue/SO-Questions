@@ -12,31 +12,36 @@ var familytree = (function () {
 
     return {
         cleanPresentation: function () {
-					//nodeCircles = {};
+					nodeCircles = {};
 					force.nodes([]);
 					force.links([]);
 					familytree.initializeGraph();
-					//alreadyThere = false;
+					alreadyThere = false;
         },
         getAlreadyThere: function () {
             return alreadyThere;
         },
+				showAll: function(){
+					initJSON = null;
+					orientdb.getFamilytreeAll(this.createGraph)
+				},
         createGraph: function (newJSON) {
-            if (alreadyThere) {
-                //nodeCircles = {};
-                this.updateForce(this.generateObjects(currentJSON = JSON.parse(initJSON)));
-                return;
-            }
-            initJSON = JSON.stringify(newJSON);
-            this.updateForce(this.generateObjects(newJSON));
-            currentJSON = newJSON;
-            alreadyThere = true;
+					// create a new graph or reinstate the saved graph
+					if (alreadyThere) {
+							this.updateForce(this.generateObjects(currentJSON = JSON.parse(initJSON)));
+							return;
+					}
+					initJSON = JSON.stringify(newJSON);
+					this.updateForce(this.generateObjects(newJSON));
+					currentJSON = newJSON;
+					alreadyThere = true;
         },
         updateGraph: function (newJSON) {
-            this.findDuplicatesAndSetEmpty(newJSON);
-            this.deleteEmptyObjectsInJSON(newJSON);
-            currentJSON = currentJSON.concat(newJSON);
-            this.updateForce(this.generateObjects(currentJSON));
+					// merge newJSON with existing graph
+					this.findDuplicatesAndSetEmpty(newJSON);
+					this.deleteEmptyObjectsInJSON(newJSON);
+					currentJSON = currentJSON.concat(newJSON);
+					this.updateForce(this.generateObjects(currentJSON));
         },
         findDuplicatesAndSetEmpty: function (newJSON) {
             for (var i = 0; i < currentJSON.length; i++) {
@@ -59,17 +64,15 @@ var familytree = (function () {
         },
         updateGraphByRemoveElement: function (clickedNode, index) {
             // remove links from or to clicked node
-            var json4Splicing = currentJSON;
-            for (var i = 0; i < json4Splicing.length; i++) {
-                if (json4Splicing[i].source.ID == clickedNode.ID) {
-                    json4Splicing[i] = {};
-                } else if (json4Splicing[i].target.ID == clickedNode.ID) {
-                    json4Splicing[i] = {};
+            for (var i = 0; i < currentJSON.length; i++) {
+                if (currentJSON[i].source.ID == clickedNode.ID) {
+                    currentJSON[i] = {};
+                } else if (currentJSON[i].target.ID == clickedNode.ID) {
+                    currentJSON[i] = {};
                 }
             }
-            familytree.deleteEmptyObjectsInJSON(json4Splicing);
+            familytree.deleteEmptyObjectsInJSON(currentJSON);
             familytree.deleteNode(force.nodes(), clickedNode);
-            currentJSON = json4Splicing;
             familytree.updateForce(familytree.generateObjects(currentJSON));
         },
         deleteNode: function (allNodes, clickedNode) {
@@ -166,7 +169,9 @@ var familytree = (function () {
 						container = svg.selectAll("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
 						container.enter().append("g").attr("id", "container");
 
-						var links = container.selectAll(".links").data(function(d){return d.links});
+						var links = container.selectAll(".links").data(function(d){
+							return d.links
+						});
 						links.enter().append("g").attr("class", "links");
 
 						link = links.selectAll("line").data(id);
@@ -204,7 +209,7 @@ var familytree = (function () {
 						var nodes = container.selectAll(".nodes").data(function(d){return d.nodes});
 						nodes.enter().append("g").attr("class", "nodes");
 
-						node = nodes.selectAll(".node").data(id);
+						node = nodes.selectAll(".node").data(id, nodeKey);
 						var newNode = node.enter().append("g").attr("class", "node");
 						node.exit().remove();
 						newNode.on("mouseover", this.mouseover)
@@ -235,17 +240,8 @@ var familytree = (function () {
 							});
 						newNode
 							.append("svg:image")
-							.attr("class", "circle");
-						node.select("image")
-							.attr("xlink:href", function (d) {
-								return "/pics/arda/creature/" + d.uniquename + "_familytree.png";
-							})
-							.attr("x", function (d) {
-								return familytree.posXY(d);
-							})
-							.attr("y", function (d) {
-								return familytree.posXY(d);
-							})
+							.attr("class", "circle")
+							.attr("xlink:href", imgHref)
 							.attr("width", function (d) {
 								return familytree.sizeXY(d);
 							})
@@ -254,6 +250,13 @@ var familytree = (function () {
 							})
 							.on("error", function () {
 								d3.select(this).style("visibility", "hidden");
+							});
+						node.select("image")
+							.attr("x", function (d) {
+								return familytree.posXY(d);
+							})
+							.attr("y", function (d) {
+								return familytree.posXY(d);
 							});
 						newNode
 							.append("text")
@@ -297,7 +300,14 @@ var familytree = (function () {
 							container.transition().duration(450).attr("transform", t.toString());
 						}
 
-					}
+						function imgHref(d) {
+							return "/pics/arda/creature/" + d.uniquename + "_familytree.png";
+						}
+						function nodeKey(d, i) {
+							return this.href ? d3.select(this).attr("href") : imgHref(d);
+						}
+
+					};
 
 					function tick() {
 						link
@@ -337,10 +347,12 @@ var familytree = (function () {
             }
         },
         sizeXY: function (d) {
-            return [10,24,28,32,36,40,44,48,52,10][d.significance || 0];
+            var deflt = -10;
+            return [deflt,20,24,28,32,36,40,44,48,52][d.significance || 0] || deflt;
         },
         posXY: function (d) {
-            return [-10, -12, -14, -16, -18, -20, -22, -24, -26, -10][d.significance || 0];
+            var deflt = 10;
+            return [deflt, -10, -12, -14, -16, -18, -20, -22, -24, -26][d.significance || 0] || deflt;
         },
         colourRace: function (d) {
             switch ((d.race)) {
@@ -428,7 +440,7 @@ var familytree = (function () {
 			force.nodes(d3.values(nodeCircles).filter(function (d) {
 				return d.linkCount;
 			}));
-			force.links(d3.values(links));
+			force.links(d3.values(links));    //TODO links is already an array, this does nothing
 			familytree.initializeGraph();
 		}
     function zoomableSVG (size, selector, z){
@@ -465,8 +477,11 @@ var familytree = (function () {
 
         return g;
     }
+    function id(d){
+			return d;
+		};
 })();
-    function id(d){return d;};
+
 
 d3.selection.prototype.moveToFront = function () {
     return this.each(function () {
