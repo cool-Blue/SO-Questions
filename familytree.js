@@ -8,7 +8,7 @@ $("#familytreecontentclose a").click(function () {
 });
 
 $("#familytreeShowallbutton").click(function () {
-    if(familytree.getAlreadyThere()) familytree.createGraph(); else orientdb.getFamilytreeAll();
+    orientdb.getFamilytreeAll();
 });
 
 $("#familytreeHideallbutton").click(function () {
