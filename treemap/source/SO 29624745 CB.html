@@ -1,0 +1,193 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      min-width: 960px;
+    }
+
+    svg {
+      overflow: hidden;
+    }
+
+    rect {
+      fill: none;
+      pointer-events: all;
+    }
+
+    circle {
+      fill: none;
+      stroke-width: 2.5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="options">
+    <select id="metod">
+      <option value="insert">insert</option>
+      <option value="append" selected="selected">append</option>
+    </select>
+    <select id="fill">
+      <option value="solid" selected="selected">solid</option>
+      <option value="none">no fill</option>
+    </select>
+    <select id="remove">
+      <option value="true">remove</option>
+      <option value="" selected="selected">don't remove</option>
+    </select>
+    <select id="mouseListenerSelector">
+      <option>listener on svg</option>
+      <option selected="selected" >listener on rect</option>
+    </select>
+    <select id="circleEventsAuto">
+      <option value="true" selected="selected">pointer-events AUTO; on circles</option>
+      <option value="">pointer-events: NONE; on circles</option>
+    </select>
+    <select id="rectEventsAuto">
+      <option value="true" selected="selected">pointer-events NONE; on rect</option>
+      <option value="">pointer-events: ALL; on rect</option>
+    </select>
+  </div>
+  <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
+  <!--<script src="d3/d3 CB.js"></script>-->
+  <script src="../../../../../d3/d3 CB.js"></script>
+
+  <script>
+    "use strict"
+    var width = Math.max(900, innerWidth),
+        height = Math.max(700, innerHeight),
+
+        svg = d3.select("body").append("svg")
+            .attr('id', 'svg')
+            .attr({
+              "width": width,
+              "height": height
+            }),
+        i = 1, c = 0,
+
+        method = document.getElementById('metod'),
+        fill = document.getElementById('fill'),
+        remove = document.getElementById('remove'),
+
+        SelectGroup = function (selectId, onChange) {
+          //select node wrapper
+          //bindes an object value to the node and adds change event listener
+          //the node reference is a live value driven by the id
+          var _node = function () {
+                 return document.getElementById(selectId)
+              },
+              _selectedOption = function() {
+                return _node()[_node().selectedIndex];
+              };
+          function _onChange() {
+            onChange.apply(_selectedOption().___objectValue___ || _node(), arguments);
+            return this
+          }
+          _node().addEventListener('change', _onChange);
+          return {
+            update: _onChange,
+            option: function(text, value) {
+              var option = new Option(text, _node().length)
+              option.___objectValue___ = value
+              _node().add(option)
+              return this
+            },
+            value: function (index, value) {
+              if (arguments.length === 1) {
+                //expect an array of values
+                value = index;
+                ([].forEach.call(_node().options, function(o, i, s) {
+                  o.___objectValue___ = value[i]
+                }))
+              } else {
+                _node().options[index].___objectValue___ = value
+              }
+              return this
+            },
+            focus: function(b) {
+               _node().focus()
+            }
+          };
+        },
+
+        mouseListenerSelector = SelectGroup('mouseListenerSelector',
+          function() {
+            //this: selected option node .___objectValue___
+            var _value = this
+            function _update(event, listener) {
+              //the node 'on' and 'off' properties are selectors for the event listeners
+              //enable the 'on' listener and remove the off listener
+              var switchOn = d3.select(_value.on),
+                  switchOff = d3.select(_value.off);
+
+              switchOn.on(event, listener);
+              switchOff.on(event, null);
+            }
+
+            _update("mousemove.circles", particle);
+            _update(("ontouchstart" in document ? "touchmove" : "mousemove") + ".circles", particle);
+
+          }).value([{ on: 'svg', off: 'rect' }, { on: 'rect', off: 'svg' }]),
+            
+        rectEventsAuto = SelectGroup('rectEventsAuto',
+          function (){
+            if (this.value) {
+              rect.attr('style', null);
+            } else {
+              rect.attr('style', 'pointer-events: all;');
+            }
+          }),
+
+        circleEvents = SelectGroup('circleEventsAuto',
+          function () {
+            var selectValue = this.value;
+            circleEvents.eventStatus = function(selection) {
+              selection.style('pointer-events', selectValue ? 'auto' : 'none')
+              }
+          }),
+
+        rect = svg.append("rect")
+            .attr('id', 'rect')
+            .attr({
+              "width": width,
+              "height": height
+            });
+
+    mouseListenerSelector.update();
+    rectEventsAuto.update();
+    circleEvents.update().focus();
+
+    d3.select('#options').on('change', function () {
+      svg.selectAll('circle').remove();
+    });
+
+    function particle() {
+      var m = d3.mouse(this),
+
+          circle = svg[method.value]("circle", "rect")
+          .attr("cx", m[0])
+          .attr("cy", m[1])
+          .attr("r", 10)
+          .style("stroke", d3.hsl((i = (i + 1) % 360), 1, .5))
+          .style("stroke-opacity", 1)
+          .style("fill", fill.value == 'solid' ? d3.hsl((i = (i + 1) % 360), 1, .5) : fill.value)
+          .call(circleEvents.eventStatus)
+          .transition().duration(1000)
+          .ease(Math.sqrt)
+          .attr("r", 100)
+
+      if (remove.value) {
+        circle
+          //.style("stroke-opacity", 1e-6)
+          //.style("fill-opacity", 1e-6)
+          .remove()
+      }
+    }
+  </script>
+
+</body>
+
+</html>

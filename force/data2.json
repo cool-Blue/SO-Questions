@@ -1,0 +1,17 @@
+{
+  "nodes":[
+    {"name": "node1", "size": 20},
+    {"name": "node2", "size": 20},
+    {"name": "node3", "size": 30},
+    {"name": "node4", "size": 20},
+    {"name": "node5", "size": 20},
+    {"name": "node6", "size": 20}
+  ],
+  "edges":[
+    {"source": 2, "target": 0},
+    {"source": 2, "target": 1},
+    {"source": 2, "target": 3},
+    {"source": 2, "target": 4},
+    {"source": 2, "target": 5}
+  ]
+}

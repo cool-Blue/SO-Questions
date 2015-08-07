@@ -1,0 +1,485 @@
+{
+    "predicates": [
+        "is_witness_to",
+        "is_dated",
+        "refers_to",
+        "is_boundary_to",
+        "is_a_tenant_of",
+        "occupation_is",
+        "is_of",
+        "is_grantor_in",
+        "is_located_in",
+        "is_parcel_in",
+        "is_recipient_in",
+        "precedes"
+    ],
+    "nodes": {
+        "Simonem de Oddewell": {
+            "text": [
+                "Simone",
+                "Simonem de Oddewell",
+                "Simoni",
+                "Simon"
+            ],
+            "offsets": [
+                [
+                    811,
+                    817
+                ],
+                [
+                    971,
+                    977
+                ],
+                [
+                    80,
+                    99
+                ],
+                [
+                    153,
+                    159
+                ],
+                [
+                    1093,
+                    1099
+                ],
+                [
+                    522,
+                    527
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T5T22T25T26T27T31",
+            "types": [
+                "Person"
+            ],
+            "name": "Simonem de Oddewell"
+        },
+        "festo sancti Michaelis pr": {
+            "text": [
+                "festo sancti Michaelis proximo ante reditum regis Iohannis cum exercitu ab Hibernia scilicet anno regni eiusdem regis Iohannis duodecimo"
+            ],
+            "offsets": [
+                [
+                    318,
+                    454
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T6",
+            "types": [
+                "Date"
+            ],
+            "name": "festo sancti Michaelis pr"
+        },
+        "Roberti de Fonte": {
+            "text": [
+                "Roberti de Fonte"
+            ],
+            "offsets": [
+                [
+                    282,
+                    298
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T14",
+            "types": [
+                "Person"
+            ],
+            "name": "Roberti de Fonte"
+        },
+        "domum": {
+            "text": [
+                "domum"
+            ],
+            "offsets": [
+                [
+                    276,
+                    281
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T17",
+            "types": [
+                "Site"
+            ],
+            "name": "domum"
+        },
+        "Walteri": {
+            "text": [
+                "Walteri"
+            ],
+            "offsets": [
+                [
+                    240,
+                    247
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T15",
+            "types": [
+                "Person"
+            ],
+            "name": "Walteri"
+        },
+        "persone de Mapeltrestede": {
+            "text": [
+                "persone de Mapeltrestede"
+            ],
+            "offsets": [
+                [
+                    248,
+                    272
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T16",
+            "types": [
+                "Occupation"
+            ],
+            "name": "persone de Mapeltrestede"
+        },
+        "Willelmo Andree": {
+            "text": [
+                "Willelmo Andree"
+            ],
+            "offsets": [
+                [
+                    1329,
+                    1344
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T28",
+            "types": [
+                "Person"
+            ],
+            "name": "Willelmo Andree"
+        },
+        "duas acras terre": {
+            "text": [
+                "duas acras terre"
+            ],
+            "offsets": [
+                [
+                    160,
+                    176
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T37",
+            "types": [
+                "Site"
+            ],
+            "name": "duas acras terre"
+        },
+        "Willelmo de la Mare": {
+            "text": [
+                "Willelmo de la Mare"
+            ],
+            "offsets": [
+                [
+                    1452,
+                    1471
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T4",
+            "types": [
+                "Person"
+            ],
+            "name": "Willelmo de la Mare"
+        },
+        "Ricardo de Bellocampo": {
+            "text": [
+                "Ricardo de Bellocampo"
+            ],
+            "offsets": [
+                [
+                    1345,
+                    1366
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T9",
+            "types": [
+                "Person"
+            ],
+            "name": "Ricardo de Bellocampo"
+        },
+        "deeds-00880111": {
+            "text": [
+                "deeds-00880111\nHec est convencio facta inter Willelmum Ioye de Mapeltrestede et Simonem de Oddewell[] scilicet quod predictus Willelmus dimisit predicto Simoni duas acras terre in Mapeltrestede cum pertinentiis suis que iacent inter gravam Walteri persone de Mapeltrestede et domum Roberti de Fonte tenend et habend a festo sancti Michaelis proximo ante reditum regis Iohannis cum exercitu ab Hibernia scilicet anno regni eiusdem regis Iohannis duodecimo usque in sex annos pro viginti solidis sterlingorum quos predictus Simon dedit predicto Willelmo premanibus reddendo inde quolibet anno predicto Willelmo et heredibus suis duos denarios scilicet unum denarium ad Pascha et unum denarium ad festum sancti Michaelis pro omne servicio et exactione Et si predictus Willelmus et heredes sui reddiderint predicto Simoni unam marcam argenti in fine predictorum sex annorum predictus Willelmus et heredes sui recipient predictas duas acras terre solute et quiete de predicto Simone et de omnibus suis Si vero tunc non reddiderint predictam marcam predicte due acre remanebunt hereditarie predicto Simoni et heredibus suis in perpetuum tenend per predictos duos denarios pro omnibus serviciis et exigenciis Hanc convencionem fideliter observandam et warantizandam uterque eorum pro se et heredibus suis alteri affidavit Hiis testibus Willelmo Andree Ricardo de Bellocampo Hugone de la Zandr[] Galfrido filio Willelmi Ricardo Hurand[] Gilberto de Oddewell[] Willelmo de la Mare et aliis multis\n"
+            ],
+            "offsets": [
+                [
+                    0,
+                    14
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T1",
+            "types": [
+                "Document"
+            ],
+            "name": "deeds-00880111"
+        },
+        "Ricardo Hurand": {
+            "text": [
+                "Ricardo Hurand"
+            ],
+            "offsets": [
+                [
+                    1412,
+                    1426
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T13",
+            "types": [
+                "Person"
+            ],
+            "name": "Ricardo Hurand"
+        },
+        "gravam": {
+            "text": [
+                "gravam"
+            ],
+            "offsets": [
+                [
+                    233,
+                    239
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T38",
+            "types": [
+                "Site"
+            ],
+            "name": "gravam"
+        },
+        "Gilberto de Oddewell": {
+            "text": [
+                "Gilberto de Oddewell"
+            ],
+            "offsets": [
+                [
+                    1429,
+                    1449
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T8",
+            "types": [
+                "Person"
+            ],
+            "name": "Gilberto de Oddewell"
+        },
+        "reditum regis Iohannis cu": {
+            "text": [
+                "reditum regis Iohannis cum exercitu ab Hibernia"
+            ],
+            "offsets": [
+                [
+                    354,
+                    401
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T7",
+            "types": [
+                "Event"
+            ],
+            "name": "reditum regis Iohannis cu"
+        },
+        "Hugone de la Zandr": {
+            "text": [
+                "Hugone de la Zandr"
+            ],
+            "offsets": [
+                [
+                    1367,
+                    1385
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T10",
+            "types": [
+                "Person"
+            ],
+            "name": "Hugone de la Zandr"
+        },
+        "Mapeltrestede": {
+            "text": [
+                "Mapeltrestede"
+            ],
+            "offsets": [
+                [
+                    63,
+                    76
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T35",
+            "types": [
+                "Place"
+            ],
+            "name": "Mapeltrestede"
+        },
+        "Willelmum Ioye": {
+            "text": [
+                "Willelmum Ioye",
+                "Willelmo",
+                "Willelmus"
+            ],
+            "offsets": [
+                [
+                    126,
+                    135
+                ],
+                [
+                    880,
+                    889
+                ],
+                [
+                    765,
+                    774
+                ],
+                [
+                    543,
+                    551
+                ],
+                [
+                    600,
+                    608
+                ],
+                [
+                    45,
+                    59
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T2T19T20T21T30T32",
+            "types": [
+                "Person"
+            ],
+            "name": "Willelmum Ioye"
+        },
+        "Galfrido filio Willelmi": {
+            "text": [
+                "Galfrido filio Willelmi"
+            ],
+            "offsets": [
+                [
+                    1388,
+                    1411
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T11",
+            "types": [
+                "Person"
+            ],
+            "name": "Galfrido filio Willelmi"
+        },
+        "dimisit": {
+            "text": [
+                "dimisit"
+            ],
+            "offsets": [
+                [
+                    136,
+                    143
+                ]
+            ],
+            "URI": "http://chartex.org/document/deeds-00880111#T36",
+            "types": [
+                "Transaction"
+            ],
+            "name": "dimisit"
+        }
+    },
+    "links": [
+        {
+            "source": "Hugone de la Zandr",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "deeds-00880111",
+            "type": "is_dated",
+            "target": "festo sancti Michaelis pr"
+        },
+        {
+            "source": "deeds-00880111",
+            "type": "refers_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "domum",
+            "type": "is_boundary_to",
+            "target": "duas acras terre"
+        },
+        {
+            "source": "Roberti de Fonte",
+            "type": "is_a_tenant_of",
+            "target": "domum"
+        },
+        {
+            "source": "Walteri",
+            "type": "is_a_tenant_of",
+            "target": "gravam"
+        },
+        {
+            "source": "Walteri",
+            "type": "occupation_is",
+            "target": "persone de Mapeltrestede"
+        },
+        {
+            "source": "Gilberto de Oddewell",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "Willelmo de la Mare",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "Willelmum Ioye",
+            "type": "is_of",
+            "target": "Mapeltrestede"
+        },
+        {
+            "source": "Willelmum Ioye",
+            "type": "is_grantor_in",
+            "target": "dimisit"
+        },
+        {
+            "source": "Willelmo Andree",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "gravam",
+            "type": "is_boundary_to",
+            "target": "duas acras terre"
+        },
+        {
+            "source": "duas acras terre",
+            "type": "is_located_in",
+            "target": "Mapeltrestede"
+        },
+        {
+            "source": "duas acras terre",
+            "type": "is_parcel_in",
+            "target": "dimisit"
+        },
+        {
+            "source": "Galfrido filio Willelmi",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "Simonem de Oddewell",
+            "type": "is_recipient_in",
+            "target": "dimisit"
+        },
+        {
+            "source": "Ricardo Hurand",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        },
+        {
+            "source": "festo sancti Michaelis pr",
+            "type": "precedes",
+            "target": "reditum regis Iohannis cu"
+        },
+        {
+            "source": "Ricardo de Bellocampo",
+            "type": "is_witness_to",
+            "target": "dimisit"
+        }
+    ]
+}

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<style>
+		body {
+			padding: 0;
+		}
+		text {
+			font-family: sans-serif;
+			font-size: 12px;
+			fill: white;
+		}
+		#csv {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div id="csv">status,dept,city,points
+		temp,finance,New York,33
+		contract,HR,London,12
+		contract,HR,New York,11
+		casual,shop,London,43
+		temp,sales,New York,14
+		contract,shop,Paris,51
+		temp,finance,London,7
+		contract,office,New York,61
+		contract,shop,London,31
+		temp,office,New York,16
+		contract,office,London,19
+		temp,finance,London,7
+		contract,office,New York,61
+		contract,sales,London,31
+		temp,finance,New York,16
+		contract,sales,Paris,19
+		temp,sales,New York,11  </div>
+	<script src="jQuery/jquery-1.11.1.min.js"></script>
+	<script src="d3/d3.js"></script>
+	<script>
+		(function main() {
+			var enterAntiClockwise = {
+				startAngle: Math.PI * 2,
+				endAngle: Math.PI * 2
+			};
+
+			var width = window.innerWidth,
+				height = window.innerHeight - 50,
+				radius = Math.min(width, height) / 2;
+
+			var color = d3.scale.ordinal()
+				.range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+			var arc = d3.svg.arc()
+				.outerRadius(radius - 0)
+				.innerRadius(radius - 70);
+
+			var pie = d3.layout.pie()
+				.sort(null)
+				.value(function (d) {
+					return d.values;
+				});
+			pie.zero = pie([{ values: 1 }, { values: 0 }])[1];  //zero pie slice
+
+			var svg = d3.select("body").insert("svg", "div")
+				.attr("width", width)
+				.attr("height", height)
+				.append("g")
+				.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+			svg.style("cursor", "pointer")
+
+			svg.append("text").attr("id", "phase").text("start").attr("stroke", "black")
+
+			d3.csv("data4u.csv", function (error, data) {
+				data = data || d3.csv.parse(d3.select("#csv").text())
+				var data1 = d3.nest()
+							.key(function (d) {
+								return d.city;
+							})
+							.rollup(function (d) {
+								return d3.sum(d, function (g) {
+									return g.points;
+								});
+							}).entries(data);
+
+				function reset() {
+					console.log("********" + /function\s+(\w*)\(/.exec(arguments.callee)[1])
+					path = render([]);
+					window.setTimeout(phase0, 2000)
+					d3.select("#phase").text(/function\s+(\w*)\(/.exec(arguments.callee)[1])
+				}
+
+				phase0();
+
+				function phase0() {
+					console.log("********" + /function\s+(\w*)\(/.exec(arguments.callee)[1])
+					path = render(data1); 
+					window.setTimeout(phase1, 2000)
+					d3.select("#phase").text(/function\s+(\w*)\(/.exec(arguments.callee)[1])
+				};
+
+
+				function phase1 () {
+					console.log("********" + /function\s+(\w*)\(/.exec(arguments.callee)[1])
+					render(change(data));
+					window.setTimeout(phase2, 2000)
+					d3.select("#phase").text(/function\s+(\w*)\(/.exec(arguments.callee)[1])
+				}
+				function phase2() {
+					console.log("********" + /function\s+(\w*)\(/.exec(arguments.callee)[1])
+					render(data1);
+					window.setTimeout(reset, 2000)
+					d3.select("#phase").text(/function\s+(\w*)\(/.exec(arguments.callee)[1])
+				}
+				function arcTween(a) {
+					var i = d3.interpolate(this._current, a);
+					this._current = i(0);
+					return function (t) {
+						//console.log(d3.format("8.6f")(t) + "\t" + f(i(t).startAngle) + "\t" + f(i(t).endAngle) + "\t" + f(i(t).value))
+						return arc(i(t));
+					};
+				};
+				function f(x) {
+					return d3.format("6.3f")(x)
+				}
+				function change(data) {
+					data = data.filter(function (d) { return d.city == "New York"; });
+					var newData = d3.nest()
+									.key(function (d) {
+										return d.dept;
+									})
+									.rollup(function (d) {
+										return d3.sum(d, function (g) {
+											return g.points;
+										});
+									}).entries(data);
+					return newData
+				}
+
+				function render(data) {
+					var path = svg.datum(data).selectAll("path").data(pie)
+					var enter = path.enter();
+					enter.append("path")
+						.attr("class", "arc")
+						.attr("fill", function (d, i) {
+							return color(d.data.key);
+						})
+						.attr("d", function (d, i) {
+							this._current = pie.zero;   //align the tween fudge factor to the DOM
+							return arc(pie.zero);   //write a a zero arc to the DOM for new slices 
+						})
+					path.attr("stroke", "white")
+					path.exit().each(function (d) {
+						var endAngle = d.endAngle
+						this._current = {};
+						for (var p in d) this._current[p] = d[p];
+						//d.startAngle = endAngle; d.value = 0;
+						d = pie.zero;
+					})
+						.transition().duration(1000).attrTween("d", (function (d, i) {
+							return arcTween
+						})()).remove()
+						.each("start.exit", function (d, i) {
+							if (i === 0) {
+								console.log("exit start\t" + path.exit().size())
+								console.log("\texit start\t" + f(d.startAngle) + "\t" + f(d.endAngle) + "\t" + f(d.value))
+								d.___last = i;
+							}
+						})
+						.each("end.exit", function (d, i) {
+							if (d.___last === i) {
+								console.log("exit end\t")
+								console.log("\texit end\t" + f(d.startAngle) + "\t" + f(d.endAngle) + "\t" + f(d.value))
+							}
+						})
+
+					path.transition().duration(1000).attrTween("d", arcTween) // redraw the arcs
+						.each("start.update", function (d, i) {
+							if (i === 0) {
+								console.log("update start\t" + path.size())
+								console.log("\tupdate start\t" + f(d.startAngle) + "\t" + f(d.endAngle) + "\t" + f(d.value))
+								d.___last = i;
+							}
+						})
+						.each("end.exit", function (d, i) {
+							if (d.___last === i) {
+								console.log("update end\t")
+								console.log("\tupdate end\t" + f(d.startAngle) + "\t" + f(d.endAngle) + "\t" + f(d.value))
+							}
+						})
+							return path;
+				}
+
+			});
+		})();
+	</script>
+</body>
+</html>

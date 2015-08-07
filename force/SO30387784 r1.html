@@ -1,0 +1,428 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+		<title></title>
+	<style>
+		div {
+			display: inline-block;
+		}
+
+	</style>
+</head>
+<body>
+	<script src="jQuery/jquery-1.11.1.min.js"></script>
+	<script src="d3/d3 CB.js"></script>
+<script>
+	$(function () {
+		var width = $(window).width(),
+			height = $(window).height();
+		var circles = [
+			{
+				x: width / 2 + 100,
+				y: height / 2,
+				radius: 100
+			},
+			{
+				x: width / 2 - 100,
+				y: height / 2,
+				radius: 100
+			},
+			//{
+			//	x: width / 2,
+			//	y: height / 2 + 100,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2 + 100,
+			//	y: height / 2,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2 - 100,
+			//	y: height / 2,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2,
+			//	y: height / 2 + 100,
+			//	radius: 100
+			//},
+		],
+		nodeFill = "#006E3C";
+
+		var force = d3.layout.force()
+			.gravity(0)
+			.charge(-100)
+			.friction(1)
+			.size([width, height])
+			.nodes(circles)
+			.linkDistance(250)
+			.linkStrength(1)
+			.on("tick", tick)
+			.on("start", function () {
+				elapsedTime.start()
+			})
+			.start();
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.style("background-color", "white");
+		var nodes = svg.selectAll(".node");
+		nodes = nodes.data(circles);
+		nodes.exit().remove();
+		var enterNode = nodes.enter().append("g")
+			.attr("class", "node")
+			.call(force.drag);
+		console.log(enterNode);
+		//Add circle to group
+		enterNode.append("circle")
+			.attr("r", function (d) {
+				return d.radius;
+			})
+			.style("fill", "#006E3C")
+			.style("opacity", 0.6);
+
+		//Drag behaviour///////////////////////////////////////////////////////////////////
+		//  hook drag behavior on force
+
+		//VELOCITY
+		//  maintain velocity state in case a force tick occurs emidiately before dragend
+		//  the tick wipes out previous position
+		var dragVelocity = (function () {
+			var dx, dy;
+			function f(d) {
+				if (d3.event) {
+					dx = d3.event.dx; dy = d3.event.dy;
+				}
+				return { dx: dx, dy: dy }
+			};
+			f.reset = function (d) {
+				if (dx && d.x === d.px && d.y === d.py) {
+					//tick occured and set px/y to x/y, re-establish velocity state
+					d.px = d.x - dx; d.py = d.y - dy;
+				} else {
+					//velocity state is ok but previous and current are reversed during drab
+					//corect the velocity direction
+					x = d.x; d.x = d.px; d.px = x;
+					y = d.y; d.y = d.py; d.py = y;
+				}
+			}
+			return f;
+		})()
+		//DRAGSTART HOOK
+		var mouseover_force, mouseout_force;
+		stdDragStart = force.drag().on("dragstart.force");
+
+		force.drag().on("dragstart.force", myDragStart);
+		function myDragStart(d) {
+			var that = this, node = d3.select(this);
+
+			logEvents.update();
+			elapsedTime.consoleOn = true;
+			elapsedTime.timestamp(arguments,"\t" + d.fixed);
+
+			nonStickyMouse();
+
+			stdDragStart.call(this, d)
+
+			function nonStickyMouse() {
+				elapsedTime.timestamp(arguments, (node.on("mouseover.force") != myMouseOver ? "not " : "") + "hooked");
+
+				if (node.on("mouseover.force") != myMouseOver) {
+
+					//node is not hooked
+					//hook mouseover/////////////////////////
+					//remove sticky node on mouseover behavior and save listeners
+					mouseover_force = node.on("mouseover.force");
+					node.on("mouseover.force", myMouseOver);
+
+					//hook mouseout/////////////////////////
+					//re-establish standard behavior on mouseout
+					mouseout_force = node.on("mouseout.force");
+					node.on("mouseout.force", function mouseout(d) {
+						elapsedTime.timestamp(arguments, d.fixed);
+						myForceMouseOut.call(that, d, elapsedTime.t() + "\tmouseout")
+					});
+
+					node.datum().___hooked = true;
+
+					//standard mouseout will clear d.fixed
+					mouseout_force.call(that, d);
+
+				} else {
+					//a new drag started before mouseout
+					node.selectAll("circle").style("fill", nodeFill);
+				}
+			}
+		}
+		function myMouseOver(d) {
+			logEvents.update();
+			elapsedTime.timestamp(arguments);
+		}
+		function myForceMouseOut(d, timeSet) {
+				var timerID  = window.setTimeout((function () {
+					var that = this, node = d3.select(this);
+					return function unhookMouseover() {
+						if (node.on("mouseover.force") != mouseover_force) {
+							//un-hook mouseover and mouseout////////////
+							node.on("mouseout.force", mouseout_force);
+							node.on("mouseover.force", mouseover_force);
+							node.datum().___hooked = false;
+							node.selectAll("circle").style("fill", nodeFill);
+							elapsedTime.timestamp(arguments, timeSet + "\t" + d.fixed);
+						}
+						//elapsedTime.consoleOn = false;
+					}
+				}).call(this), 300);
+				return timerID;
+		}
+
+		var f = d3.format("6,.0f");
+		//DRAG HOOK
+		var stdDrag = force.drag().on("drag.force");
+		force.drag().on("drag.force", myDrag);
+		function myDrag(d) {
+			var v, p;
+			//maintain back-up velocity state
+			v = dragVelocity();
+			p = { x: d3.event.x, y: d3.event.y };
+			elapsedTime.timestamp(arguments, "\t" + f(p.x) + "\t" + f(p.y) + "\t" + d.fixed);
+			stdDrag.call(this, d)
+		}
+		myDrag.active = function () {
+			return
+		}
+		//DRAGEND HOOK
+		var stdDragEnd = force.drag().on("dragend.force");
+		force.drag().on("dragend.force", myDragEnd);
+		function myDragEnd(d) {
+			//var x = d.x, y = d.y;
+			//stop dead
+			//d.px = d.x; d.py = d.y;
+
+			//correct the final velocity vector at drag end
+			dragVelocity.reset(d)
+
+			logEvents.update();
+			elapsedTime.timestamp(arguments, d.fixed);
+			d3.select(this).selectAll("circle").style("fill", "red");
+			stdDragEnd.call(this, d)
+		}
+		function tick(e) {
+			//elapsedTime.timestamp(arguments);
+			log.update(e.alpha);
+			nodes.attr("transform", function (d) {
+				var r = 100;
+				if (d.x - r <= 0 && d.px > d.x) d.px -= (d.px - d.x) * 2;
+				if (d.x + r >= width && d.px < d.x) d.px += (d.x - d.px) * 2;
+				if (d.y - r <= 0 && d.py > d.y) d.py -= (d.py - d.y) * 2;
+				if (d.y + r >= height && d.py < d.y) d.py += (d.y - d.py) * 2;
+				return "translate(" + d.x + "," + d.y + ")";
+			});
+			nodes.style("fill", function (d, i) { return d.___hooked && !d.fixed ? "red" : nodeFill })
+			force.start();
+		}
+		g.force = force;
+		g.v = dragVelocity;
+		elapsedTime.message = function (value) {
+			var this_lap
+			return 'time elapsed : ' + d3.format(",.3f")(value)
+					+ ' sec\t' + d3.format(",d")(this.ticks)
+					+ '\ttick time: ' + d3.format(",.3f")(this_lap = this.lap().lastLap)
+							+ '\t(' + d3.format(",.6f")(this.aveLap(this_lap)) + ')'
+			//+ '\ttimer count: ' + (g.force ? d3.timer.queue.includes(g.force.tick).length : 'undefined')
+		}
+		elapsedTime.start(100);
+	});
+
+
+	var g = {};
+	function OutputDiv(on, style, before) {
+		function _OutputDiv(on, style, before) {
+			var _sel = d3.select(on), id = ~~(Math.random() * 1000),
+					defStyle = {
+						margin: '10px 10px 10px 0',
+						padding: '3px 3px 3px 3px',
+						display: 'inline-block',
+						'background-color': '#ccc'
+					};
+			if (before) {
+				_sel = _sel.insert('div', before)
+			} else {
+				_sel = _sel.append('div')
+			}
+			_sel = _sel.style(style ? style : defStyle)
+				.attr("id", "ouputDiv_" + id)
+				.attr("class", "ouputDiv")
+			this.selection = _sel
+		}
+		_OutputDiv.prototype.update = function (value) {
+			this.selection.text(this.message(value))
+			return this
+		}
+		_OutputDiv.prototype.message = function (value) {
+			return value
+		}
+		return new _OutputDiv(on, style, before)
+	}
+
+	var log = OutputDiv(document.body)
+	log.message = function (value) {
+		return 'alpha: ' + d3.format(".3f")(value)
+				 + '\tgravity: ' + d3.format(".3f")(g.force.gravity())
+				 + '\tcharge: ' + d3.format(".1f")(g.force.charge())
+				 + '\tfriction: ' + d3.format(".3f")(g.force.friction())
+				 + "\t velocity: " + d3.format(".3f")(g.v().dx) + "\t" + d3.format(".3f")(g.v().dy)
+	}
+	var logEvents = OutputDiv(document.body, null, "div");
+	logEvents.message = function (d) {
+		var eType = d3.event.type;
+		//console.log(eType)
+		return eType;
+	}
+	var elapsedTime = OutputDiv(document.body, null, "#vizcontainer")
+	elapsedTime.start = function (aveWindow) {
+		this.startTime = window.performance.now()
+		this.lapTime = this.startTime
+		this.ticks = 0
+		this.update(0)
+		this.aveLap = this.AveLap(aveWindow)
+		this.running = true
+		return this
+	}
+	elapsedTime.lap = function () {
+		if (this.running) {
+			this.lastLap = (window.performance.now() - this.lapTime) / 1000
+			this.lapTime = window.performance.now()
+		}
+		return this
+	}
+	elapsedTime.AveLap = function (aveWindow) {
+		var _i = 0, _aveP = 0, _history = [];
+		this.AveLap.window = aveWindow = aveWindow || this.AveLap.window
+		return function (this_lap) {
+			this_lap = this_lap || this.lap().lastLap
+			if (!this.AveLap.window) return _aveP = _i++ ? (_aveP + this_lap / (_i - 1)) * (_i - 1) / _i++ : this.lap().lastLap
+			_history.push(this_lap)
+			for (; _history.length > this.AveLap.window;) {
+				_history.shift()
+			}
+			return _history.reduce(function (ave, t, i, h) {
+				return ave + t / h.length
+			}, 0)
+		}
+	}
+	elapsedTime.AveLap.window = null
+	elapsedTime.t = function () {
+		return d3.format(",.3f")((window.performance.now() - this.startTime) / 1000)
+	}
+	elapsedTime.mark = function (f) {
+		if (this.running) {
+			var _tMark = (window.performance.now() - this.startTime);
+			if (!f) {
+				this.ticks += 1
+				this.update(_tMark / 1000)
+			} else if (f.call) {
+				f.call(this, _tMark)
+			}
+		} else {
+			_tMark = 0
+			//this.start()
+		}
+		return this
+	}
+	elapsedTime.message = function (value) {
+		return 'time elapsed : ' + d3.format(",.3f")(value)
+				+ ' sec\t' + d3.format(",d")(this.ticks)
+	}
+	elapsedTime.stop = function (value) {
+		this.running = false
+		return this
+	}
+	elapsedTime.timestamp = function (args, message) {
+		var callee = args.callee ? /function\s+(\w*)\(/.exec(args.callee)[1] : null;
+		message = typeof message != "undefined" ? message.toString() : args.callee ? null : args;
+		if (this.consoleOn && callee) {
+			this.mark(function (t) {
+				console.log(d3.format(",.6f")(t / 1000) + (callee ? "\t" + callee : "") + (message ? "\t" + message : ""))
+			})
+		}
+	}
+	elapsedTime.consoleOn = false;
+
+	function test() {
+		var x_immutable = 0; //the value of x_immutable is a reference to a Number object on the heap with value 0
+
+		x_immutable = window.setTimeout(function () {
+			console.log("timerID_immutable: " + x_immutable);
+		}, 0);
+		//the value of x_immutable is a reference to a Number object on the heap with value of the timer id: 1
+		//the Number object with value 0 has no reference so is garbage collected
+
+		x_immutable = window.setTimeout(function () {
+			console.log("timerID_immutable: " + x_immutable);
+		}, 0);
+		//the value of x_immutable is a reference to a Number object on the heap with value of the timer id: 2
+		//the Number object with value 1 has no reference so is garbage collected
+
+		//result...
+		//timerID_immutable: 2
+		//timerID_immutable: 2
+
+		x_immutable = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Number object on the heap that x_immutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_immutable: " + x);
+			}
+		})(x_immutable), 0);
+		//result...
+		//timerID_immutable: 3
+		//timerID_immutable: 3
+		//timerID_immutable: 2
+
+		var x_mutable = {}; //the value of x_mutable is a reference to an Object object on the heap with value undefined
+		x_mutable.id = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Object object on the heap that x_mutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_mutable: " + x.id);
+			}
+		})(x_mutable), 0);
+		//result...
+		//timerID_immutable: 3
+		//timerID_immutable: 3
+		//timerID_immutable: 2
+		//timerID_mutable: 4
+
+
+	
+		var x_immutable0 = window.setTimeout(function () {
+			console.log("\n///////////////////////////////////////////////////////////////////////////////////////////////")
+			console.log("timerID_immutable: " + x_immutable0);
+		}, 0);
+		x_immutable0 = "a new value"
+		//the value of x_immutable -> new Number(1)
+		//the Number object with value 0 has no reference so is garbage collected
+
+		var x_immutable1 = window.setTimeout((function (x) {
+			return function () {
+				console.log("timerID_immutable: " + x);
+			}
+		})(x_immutable1), 0);
+		//result...
+
+		var x_mutable = {}; //the value of x_mutable is a reference to an Object object on the heap with value undefined
+		x_mutable.id = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Object object on the heap that x_mutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_mutable: " + x.id);
+			}
+		})(x_mutable), 0);
+		x_mutable = {};
+	};
+</script>
+</body>
+</html>

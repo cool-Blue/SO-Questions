@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title> - jsFiddle demo</title>
+  <style type='text/css'>
+    body {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      background-color: #fff;
+      width: 960px;
+      height: 700px;
+      margin-top: 10px;
+    }
+
+    #main {
+      float: left;
+      width: 750px;
+    }
+
+    #sidebar {
+      float: right;
+      width: 100px;
+    }
+
+    #sequence {
+      width: 600px;
+      height: 70px;
+    }
+
+    #legend {
+      padding: 10px 0 0 3px;
+    }
+
+      #sequence text, #legend text {
+        font-weight: 600;
+        fill: #fff;
+      }
+
+    #chart {
+      position: relative;
+    }
+
+      #chart path {
+        stroke: #fff;
+      }
+
+    #explanation {
+      text-align: center;
+      font-size: 1.2em;
+      color: #666;
+      z-index: -1;
+    }
+
+    #percentage {
+      font-size: 1.5em;
+    }
+  </style>
+</head>
+  <body>
+    <div id="ford3" style="height:400px; width:400px;"></div>
+    <script src="d3 CB.js"></script>
+    <script type='text/javascript'>
+      window.onload = function () {
+        var id = 'ford3';
+        var color = d3.scale.category20c();
+        var p = d3.select("#" + id);
+        var height = p[0][0].clientHeight;
+        var width = p[0][0].clientWidth;
+        var margin = {
+          'top': 10,
+          'bottom': 40,
+          'left': 10,
+          'right': 10,
+        };
+
+        var cheight = height - margin.top - margin.bottom;
+        var cwidth = width - margin.left - margin.right;
+        var radius = Math.min(cwidth, cheight) / 2;
+
+        var svg = p.append("svg")
+            .style('height', '100%')
+            .style('width', '100%')
+            .append("g")
+              .attr("transform", "translate(" + cwidth / 2 + "," + cheight * .52 + ")");
+
+        var text = svg.selectAll("#explanation");
+
+        var partition = d3.layout.partition()
+          .sort(null)
+          .size([2 * Math.PI, radius * radius])
+          .value(function (d) { return d.size; });
+          //.children(function (d) { return d.children });
+
+        var arc = d3.svg.arc()
+          .startAngle(function (d) { return d.x })
+          .endAngle(function (d) { return d.x + d.dx; })
+          .innerRadius(function (d, i) {
+            return Math.sqrt(d.y);
+            return (d.y);
+          })
+          .outerRadius(function (d, i) {
+            console.log(i + "\tinner: " + f(Math.sqrt(d.y))
+                          + "\t\touter: " + f(Math.sqrt(d.y + d.dy))
+                          + "\t\tave: " + f((Math.sqrt(d.y + d.dy) + Math.sqrt(d.y)) / 2)
+                          + "\t\tband: " + f(Math.sqrt(d.y + d.dy) - Math.sqrt(d.y))
+                          + "\t\toffset: " + f((Math.sqrt(d.y + d.dy) - Math.sqrt(d.y)) / 2)
+                          + "\t\ttext: " + f(Math.sqrt(d.y + d.dy) - (Math.sqrt(d.y + d.dy) - Math.sqrt(d.y)) / 2))
+            return Math.sqrt(d.y + d.dy);
+            return (d.y + d.dy);
+          });
+        function f(x) {
+          return d3.format("8,.0f")(x)
+        }
+        var data = (function () {
+          return {
+            "facet_pivot": {
+              "cat,MFR": [
+                {
+                  "field": "cat",
+                  "value": "CAT1",
+                  "count": 10731,
+                  "pivot": [
+                    {
+                      "field": "MFR",
+                      "value": "MFR4",
+                      "count": 3700
+                    },
+                    {
+                      "field": "MFR",
+                      "value": "MFR2",
+                      "count": 2355
+                    }
+                  ]
+                },
+                {
+                  "field": "cat",
+                  "value": "CAT1",
+                  "count": 10731,
+                  "pivot": [
+                    {
+                      "field": "MFR",
+                      "value": "MFR1",
+                      "count": 10000
+                    },
+                    {
+                      "field": "MFR",
+                      "value": "MFR2.",
+                      "count": 2355
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        })();
+        var data = parse_facet_pivot(data.facet_pivot['cat,MFR']);
+        console.log(data);
+        var nodes = svg.datum(data).selectAll("g")
+            .data(partition.nodes)
+            .enter().append("g"),
+            path = nodes.append("path")
+              .attr("display", function (d) { return d.depth ? null : "none"; }) // hide inner ring
+              .attr("d", arc)
+              .attr('id', nodeID)
+              .style("stroke", "black") //"#fff")
+              .style("fill", function (d) {
+                if (d.depth > 0) {
+                  return color(d.name);
+                }
+              })
+              .each(stash)
+              .on("mouseover", mouseover)
+            //.on("mouseenter",mouseover)
+              .on("mouseleave", mouseleave),
+
+            labels = nodes.append("text")
+              .style("pointer-events", "none")
+              .style("font-size", 10)
+              //.attr("v")
+              .attr("dx", "10px")
+              .attr("dy", function (d) {
+                return (Math.sqrt(d.y + d.dy) - Math.sqrt(d.y)) / 2 + 5
+              })
+              .append("textPath")
+                .attr("xlink:href", function (d) { return "#" + nodeID(d) })
+              .text(function (d) {
+                return d.name
+              })
+
+        function mouseover(d) {
+          var parents = getAncestors(d);
+
+          d3.selectAll("path")
+            .style("opacity", 0.3);
+
+          d3.selectAll("path")
+            .filter(function (node) {
+              return (parents.indexOf(node) >= 0);
+            })
+            .style("opacity", 1);
+          svg.selectAll("text")
+          .filter(function (d) {
+            var id = d3.select(this).selectAll("textpath")
+            return
+          })
+        }
+
+        function mouseleave(d) {
+          d3.selectAll("path")
+              .style("opacity", 1);
+        }
+
+        function nodeID (d) {
+          return d.name + "-" + d.value;
+        }
+
+        function getAncestors(node) {
+          var path = [];
+          var current = node;
+          while (current.parent) {
+            path.unshift(current);
+            current = current.parent;
+          }
+          return path;
+        }
+
+        function parse_facet_pivot(data) {
+          var out = { 'name': 'root', 'children': [] };
+          for (ob in data) {
+            out.children.push(parse_item(data[ob]));
+          }
+          console.log(out)
+          return out;
+        }
+
+        function parse_item(doc) {
+          var t = { 'name': doc.value, 'size': doc.count, 'children': [] };
+          for (piv in doc.pivot) {
+            t.children.push(parse_item(doc.pivot[piv]));
+          }
+          return t;
+        }
+
+
+        // Stash the old values for transition.
+        function stash(d) {
+          d.x0 = d.x;
+          d.dx0 = d.dx;
+        }
+
+        function arcTween(a) {
+          var i = d3.interpolate({ x: a.x0, dx: a.dx0 }, a);
+          return function (t) {
+            var b = i(t);
+            a.x0 = b.x;
+            a.dx0 = b.dx;
+            return arc(b);
+          };
+        }
+
+      }
+
+    </script>
+  </body>
+
+</html>

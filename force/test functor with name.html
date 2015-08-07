@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+</head>
+<body>
+  <script src="../../../../jQuery/jquery-1.11.1.min.js"></script>
+  <script>
+    var global = "g";
+    $(function () {
+      var foos = {}, foo;
+      function MakeIt() {
+        var myName = /function\s+(\w*)\(/.exec(arguments.callee)[1];
+        function f() {
+          return "f"
+        };
+        f.___name = myName
+        return f
+      };
+
+      foos.MakeIt = MakeIt;
+      foo = MakeIt();
+      alert(foo.___name);
+    })
+    function MakeBazz(x) { return function () { return x } };
+    var bazz = MakeBazz("bazz");
+  </script>
+</body>
+</html>

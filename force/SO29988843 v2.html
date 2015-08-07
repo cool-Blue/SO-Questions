@@ -1,0 +1,462 @@
+﻿<!DOCTYPE html>
+<meta charset="utf-8">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title></title>
+	<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+	<!--<link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,300,600,700' rel='stylesheet' type='text/css'>
+	<link href='http://fonts.googleapis.com/css?family=Roboto:400,400italic,700' rel='stylesheet' type='text/css'>-->
+	<style>
+		body {
+			/*font-family: 'Open Sans', sans-serif;*/
+			font-family: 'Roboto', sans-serif;
+		}
+
+		#vizcontainer {
+			width: 100%;
+			height: 100%;
+			display: block;
+		}
+
+		svg {
+			/*outline: 1px solid red;*/
+			background-color: rgba(255, 127, 80, 0.6);
+		}
+
+		div {
+			display: inline-block;
+		}
+
+		#method, #clear {
+			margin-left: 20px;
+			background-color: rgba(255, 127, 80, 0.6);
+			border: none;
+		}
+
+		#clear {
+			float: right;
+		}
+
+		#inputs {
+			font-size: 16px;
+			display: block;
+			width: 900px;
+			/*outline: 1px solid red;*/
+			/*position: relative;*/
+		}
+
+		.input {
+			display: inline-block;
+			background-color: rgba(255, 127, 80, 0.37);
+			outline: 1px solid black;
+			position: relative;
+			margin: 10px 10px 0 0;
+			padding: 3px 10px;
+		}
+
+		.input div {
+			width: 60px;
+		}
+		.method {
+			display: block;
+		}
+		.dead {
+			opacity: 0.2;
+			fill: #9bb9ef;
+			stroke: black;
+			stroke-opacity: 0.8;
+			stroke-width: 1px;
+		}
+
+		.ui-slider,
+		.ui-slider .ui-slider-handle {
+			width: 3px;
+			background: black;
+			border-radius: 0;
+		}
+
+		.ui-slider-horizontal .ui-slider-handle {
+			top: calc(50% - 1em / 2);
+			height: 1em;
+			margin: 0;
+			border: none;
+		}
+
+		div.ui-slider-horizontal {
+			width: 200px;
+			margin: auto 10px auto 10px;
+			/*position: absolute;*/
+			/*bottom: 0.1em;*/
+			position: absolute;
+			bottom: calc( 50% - 2.5px);
+			/*vertical-align: middle;*/
+			height: 5px;
+			border: none;
+		}
+
+		.slider-value {
+			position: absolute;
+			text-align: right;
+		}
+
+		input, select, button {
+			font-family: inherit;
+			font-size: inherit;
+		}
+	</style>
+</head>
+<body>
+
+	<div id="inputs">
+		<div class="input method">
+			<span>method: </span>
+			<select id="method">
+				<option value="Direct" selected="selected">Direct</option>
+				<option value="Idiomatic">Idiomatic</option>
+			</select>
+			<button id="clear" name="clear">clear</button>
+		</div>
+
+
+		<div id="gravitySlider"></div>
+		<div id="chargeSlider"></div>
+		<div id="frictionSlider"></div>
+		<div id="deadRslider"></div>
+
+	</div>
+	<div id="vizcontainer"></div>
+
+	<!--<script src="jQuery/jquery-1.11.1.min.js"></script>-->
+	<script src="jquery-1.11.1.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+	<!--<script src="d3/d3 CB.js"></script>-->
+	<script src="d3 CB.js"></script>
+	<script>
+
+		var g = {}
+
+		$(function () {
+			var updateMethods = {}, updateMethod;
+			var w = 900, h = 600, nodes = [], deadR = 10,
+
+					svg = d3.select("#vizcontainer").append("svg")
+					.attr("width", w)
+					.attr("height", h);
+
+			g.force = d3.layout.force()
+					.nodes(nodes)
+					.size([w, h])
+					.gravity(0) //0.55)
+					.charge(2) //-50)
+					.friction(1) //0.14)
+					.on("start", function () {
+						elapsedTime.start()
+					})
+					.on("end", function () {
+						elapsedTime.stop()
+					});
+
+			function clear (e) {
+				nodes.length = 0;
+				g.force.stop();
+				log.update(0)
+				elapsedTime.mark().stop()
+				d3.selectAll("circle").remove();
+			}
+			$("#clear").click(clear);
+
+			SliderControl("#gravitySlider", "gravity", g.force.gravity, [0, 1], ",.3f");
+			SliderControl("#chargeSlider", "charge", g.force.charge, [-100, 100], ",.1f");
+			SliderControl("#frictionSlider", "friction", g.force.friction, [0, 1], ",.3f");
+			SliderControl("#deadRslider", "radius", function (r) {
+				if (r) {
+					deadR = r
+					svg.selectAll("circle.dead").attr("r", deadR)
+					return g.force
+				} else {
+					return deadR
+				}
+			}, [1, 50], ",.1f");
+
+			function SliderControl(selector, title, value, domain, format) {
+				var accessor = d3.functor(value), rangeMax = 1000,
+						_scale = d3.scale.linear().domain(domain).range([0, rangeMax]),
+						_$outputDiv = $("<div />", { class: "slider-value" }),
+						_update = function (value) {
+							_$outputDiv.css("left", 'calc( '
+								+ (_$slider.position().left + _$slider.outerWidth()) + 'px + 1em )')
+							_$outputDiv.text(d3.format(format)(value));
+							$(".input").width(_$outputDiv.position().left + _$outputDiv.outerWidth() - _innerLeft)
+
+						},
+
+						_$slider = $(selector).slider({
+							value: _scale(accessor()),
+							max: rangeMax,
+							slide: function (e, ui) {
+								_update(_scale.invert(ui.value));
+								accessor(_scale.invert(ui.value)).start();
+							}
+						}),
+						_$wrapper = _$slider.wrap("<div class='input'></div>")
+						.before($("<div />").text(title + ":"))
+						.after(_$outputDiv).parent(),
+						_innerLeft = _$wrapper.children().first().position().left;
+
+				_update(_scale.invert($(selector).slider("value")))
+				g.force.alpha(0.0051);
+
+			};
+
+
+			d3.select("#method").on("change", function () {
+				clear();
+				updateMethod = updateMethods[this.value]()
+			})
+
+			g.force.on("tick", function (e) {
+				log.update(e.alpha)
+				elapsedTime.mark()
+
+				var circles = svg.selectAll("circle").data(nodes, function (d) { return d.id })
+
+				//ENTER
+				//  Direct
+				//    data is there but the circle has been deleted by completion of transition
+				//    replace the previously live node with a dead one
+				//  Idiomatic
+				//    always zero size
+				circles.enter().append("circle")
+					.attr("r", 1)
+					.transition("in")
+					.attr("r", deadR)
+					.attr("class", "dead");
+				//UPDATE+ENTER
+
+				circles.attr("transform", function (d) {
+					var _circ = { x: d.x, y: d.y, r: this.r.animVal.value },
+							circ = containCircle(_circ, { H: h, W: w });
+					d.x = circ.x; d.y = circ.y;
+					return "translate(" + d.x + "," + d.y + ")";
+				});
+
+				function containCircle(circ, rect) {
+					var max = Math.max, min = Math.min;
+					return {
+						x: max(circ.r, min(rect.W - circ.r, circ.x)),
+						y: max(circ.r, min(rect.H - circ.r, circ.y))
+					}
+				}
+
+				g.force.alpha(e.alpha / .99 * .999);
+			});
+
+			svg.on("mousemove", onMouseMove)
+			.on("touchmove", onTouchMove)
+			.on("touchstart", onTouchStart);
+
+			function onMouseMove() {
+				updateMethod.call(this)
+			}
+			var touched = false;
+			function onTouchStart() {
+				d3.event.preventDefault();
+				d3.event.stopPropagation();
+				touched = true;
+				alert("touch start")
+			}
+			function onTouchMove() {
+				d3.event.preventDefault();
+				d3.event.stopPropagation();
+				updateMethod.call(this)
+			}
+
+			function Idiomatic() {
+				var indx = 0, myName = /function\s+(\w*)\(/.exec(arguments.callee)[1];
+				function f() {
+					var pointM = d3.mouse(this), pointT = d3.touches(this),
+							point = pointT.length ? pointT[0] : pointM,
+							node = { x: point[0], y: point[1], id: indx++ };
+
+					nodes.push(node);
+
+					svg.selectAll("circle")
+					.data(nodes)
+					.enter().append("circle")
+					.attr("r", 1e-6)
+					.transition("in")
+						.attr("r", 4.5)
+					.transition("out").duration(1000)
+						.delay(1000)
+//						.attr("r", 1)
+							.each("end.out", function (d) {
+								d3.select(this).attr("class", "dead")
+							})
+					.transition("burst").duration(100)
+						.attr("r", 10)
+						.remove()
+							.each("end.out", function (d) {
+								var i = nodes.indexOf(d);
+								nodes.splice(i, 1)
+							});
+
+					g.force.start();
+				};
+				f.___name = myName;
+				return f
+			} /*Idiomatic*/
+
+			function Direct() {
+				var indx = 0, myName = /function\s+(\w*)\(/.exec(arguments.callee)[1];
+				function f () {
+							var point = d3.mouse(this),
+									node = { x: point[0], y: point[1], id: indx++ };
+
+							svg.append("circle")
+								.data([node])
+								.attr("class", "alive")
+								.attr("id", node.id)
+								.attr("r", 1e-6)
+								.transition()
+								.duration(100)
+								.attr("r", 4.5)
+								.transition()
+								.delay(5000)
+								.duration(500)
+								.attr("r", 1e-6)
+								.remove();
+
+							g.force.nodes().push(node);
+							g.force.start();
+						};
+				f.___name = myName;
+				return f
+			} /*Direct*/
+
+			updateMethods.Idiomatic = Idiomatic;
+			updateMethods.Direct = Direct;
+			updateMethod = Idiomatic();
+			$("#method").get()[0].value = updateMethod.___name;
+
+			log.update(g.force.alpha(0.0051).alpha())
+			elapsedTime.message = function (value) {
+				var this_lap
+				return 'time elapsed : ' + d3.format(",.3f")(value)
+						+ ' sec\t' + d3.format(",d")(this.ticks)
+						+ '\ttick time: ' + d3.format(",.3f")(this_lap = this.lap().lastLap)
+								+ '\t(' + d3.format(",.6f")(this.aveLap(this_lap)) + ')'
+						//+ '\ttimer count: ' + (g.force ? d3.timer.queue.includes(g.force.tick).length : 'undefined')
+			}
+			elapsedTime.start(100);
+		})
+
+		function OutputDiv(on, style, before) {
+			function _OutputDiv(on, style, before) {
+				var _sel = d3.select(on), id = ~~(Math.random() * 1000),
+						defStyle = {
+							margin: '10px 10px 10px 0',
+							padding: '3px 3px 3px 3px',
+							display: 'inline-block',
+							'background-color': '#ccc'
+						};
+				if (before) {
+					_sel = _sel.insert('div', before)
+				} else {
+					_sel = _sel.append('div')
+				}
+				_sel = _sel.style(style ? style : defStyle)
+					.attr("id", "ouputDiv_" + id)
+					.attr("class", "ouputDiv")
+				this.selection = _sel
+			}
+			_OutputDiv.prototype.update = function (value) {
+				this.selection.text(this.message(value))
+				return this
+			}
+			_OutputDiv.prototype.message = function (value) {
+				return value
+			}
+			return new _OutputDiv(on, style, before)
+		}
+
+		var log = OutputDiv(document.body, null, "#vizcontainer")
+		log.message = function (value) {
+			return 'alpha: ' + d3.format(".3f")(value)
+					 + '\tgravity: ' + d3.format(".3f")(g.force.gravity())
+					 + '\tcharge: ' + d3.format(".1f")(g.force.charge())
+					 + '\tfriction: ' + d3.format(".3f")(g.force.friction())
+					 + "\t nodes: " + g.force.nodes().length
+		}
+
+		var elapsedTime = OutputDiv(document.body, null, "#vizcontainer")
+		elapsedTime.start = function (aveWindow) {
+			this.startTime = window.performance.now()
+			this.lapTime = this.startTime
+			this.ticks = 0
+			this.update(0)
+			this.aveLap = this.AveLap(aveWindow)
+			this.running = true
+			return this
+		}
+		elapsedTime.lap = function () {
+			if (this.running) {
+				this.lastLap = (window.performance.now() - this.lapTime) / 1000
+				this.lapTime = window.performance.now()
+			}
+			return this
+		}
+		elapsedTime.AveLap = function (aveWindow) {
+			var _i = 0, _aveP = 0, _history = [];
+			this.AveLap.window = aveWindow = aveWindow || this.AveLap.window
+			return function (this_lap) {
+				this_lap = this_lap || this.lap().lastLap
+				if(!this.AveLap.window) return _aveP = _i++ ? (_aveP + this_lap / (_i - 1)) * (_i - 1) / _i++ : this.lap().lastLap
+				_history.push(this_lap)
+				for (; _history.length > this.AveLap.window;) {
+					_history.shift()
+				}
+				return _history.reduce(function (ave, t, i, h) {
+					return ave + t / h.length
+				}, 0)
+			}
+		}
+		elapsedTime.AveLap.window = null
+		elapsedTime.t = function () {
+			return d3.format(",.3f")((window.performance.now() - this.startTime) / 1000)
+		}
+		elapsedTime.mark = function (f) {
+			if (this.running) {
+				var _tMark = (window.performance.now() - this.startTime);
+				if (!f) {
+					this.ticks += 1
+					this.update(_tMark / 1000)
+				} else if (f.call) {
+					f.call(this, _tMark)
+				}
+			} else {
+				_tMark = 0
+				//this.start()
+			}
+			return this
+		}
+		elapsedTime.message = function (value) {
+			return 'time elapsed : ' + d3.format(",.3f")(value)
+					+ ' sec\t' + d3.format(",d")(this.ticks)
+		}
+		elapsedTime.stop = function (value) {
+			this.running = false
+			return this
+		}
+		elapsedTime.timestamp = function (message) {
+			if (this.consoleOn) {
+				this.mark(function (t) {
+					console.log(d3.format(",.6f")(t / 1000) + (message ? "\t" + message : ""))
+				})
+			}
+		}
+		elapsedTime.consoleOn = false;
+
+	</script>
+</body>
+
+</html>

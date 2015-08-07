@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+</head>
+<body>
+  <svg height="637" width="1280">
+    <g id="camel" transform="translate(160,424.6666666666667)">
+      <text y="-120">textPath</text>
+      <path d="M6.123233995736766e-15,-100A100,100 0 0,1 100,0L100,0A100,100 0 0,0 6.123233995736766e-15,-100Z" stroke="black" id="path1"></path>
+      <text><textPath xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#path1">test text</textPath></text>
+      <text>other text</text>
+      <text id="camelCase" y="50">textPath selection size: 0</text>
+    </g>
+    <g id="lower" transform="translate(640,424.6666666666667)">
+      <text y="-120">textpath</text>
+      <path d="M6.123233995736766e-15,-100A100,100 0 0,1 100,0L100,0A100,100 0 0,0 6.123233995736766e-15,-100Z" stroke="black" id="path2"></path>
+      <!--<text><textpath xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#path2">test text</textpath></text>-->
+      <text>other text</text>
+      <text id="lowercase" y="50">textPath selection size: 1</text>
+    </g>
+  </svg>
+<script>
+  var text = document.querySelector("#lower text"),
+      tp = document.createElementNS(text.namespaceURI, "textpath");
+  text.appendChild(tp);
+  document.append
+</script>
+</body>
+</html>

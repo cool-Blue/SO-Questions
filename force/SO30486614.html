@@ -1,0 +1,277 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    text {
+      font-size: 8px;
+    }
+  </style>
+</head>
+<body>
+  <script src="d3 CB.js"></script>
+  <script type="text/javascript">
+
+    var w = window.innerWidth,
+    h = window.innerHeight,
+    r = 10,
+    charge = 300,
+    def_color = "#bdbdbd", //default node color
+    kmer = 25; //kmer size
+
+    var dataset = { "nodes": [{ "Malawi": [623], "length": 46, "Belarus": [633], "name": "HIV", "sequence": "AAAATCTCTAGCAGTGGCGCCCGAACAGGGACTTGAAAGCGAAAGT", "id": "6804", "genomes": ["Belarus", "Malawi"] }, { "Malawi": [645], "length": 62, "name": "HIV", "sequence": "GAACAGGGACTTGAAAGCGAAAGTAAGACCAGAGGAGATCTCTCGACGCAGGACTCGGCTTG", "id": "6806", "genomes": ["Malawi"] }, { "length": 59, "Belarus": [655], "name": "HIV", "sequence": "GAACAGGGACTTGAAAGCGAAAGTTCCAGAGAAGTTCTCTCGACGCAGGACTCGGCTTG", "id": "6805", "genomes": ["Belarus"] }, { "Malawi": [612], "length": 35, "name": "HIV", "sequence": "TGGTAGCGTGGAAAATCTCTAGCAGTGGCGCCCGA", "id": "6886", "genomes": ["Malawi"] }, { "length": 35, "Belarus": [622], "name": "HIV", "sequence": "AGACGGTGTAAAAAATCTCTAGCAGTGGCGCCCGA", "id": "6915", "genomes": ["Belarus"] }, { "Malawi": [683], "length": 28, "Belarus": [690], "name": "HIV", "sequence": "TCTCTCGACGCAGGACTCGGCTTGCTGA", "id": "6938", "genomes": ["Belarus", "Malawi"] }, { "Malawi": [1490], "length": 121, "name": "HIV", "sequence": "AGCAGGAACTACTAGTACCCTTCAGGAACAAATAGCATGGATGACAGGTAACCCACCTATTCCAGTGGGAGACATCTACAAAAGATGGATAATTCTGGGATTAAATAAAATAGTAAGAATG", "id": "6845", "genomes": ["Malawi"] }, { "Malawi": [1464], "length": 50, "Belarus": [1480], "name": "HIV", "sequence": "ATGAGAGAACCAAGGGGAAGTGACATAGCAGGAACTACTAGTACCCTTCA", "id": "6843", "genomes": ["Belarus", "Malawi"] }, { "length": 121, "Belarus": [1506], "name": "HIV", "sequence": "AGCAGGAACTACTAGTACCCTTCAAGAACAAATAGGACGGATGACAAGCAACCCACCTATCCCAGTGGGAGACATCTATAAAAGATGGATAATCCTAGGATTAAATAAAATAGTAAGAATG", "id": "6844", "genomes": ["Belarus"] }, { "Malawi": [895], "length": 593, "name": "HIV", "sequence": "TATGGGCAAGCAGGGAGCTGGAAAAATTTGCACTTAACCCTGGCCTTTTAGAAACATCAGAAGGCTGTAAACAAATAATAAAACAGCTACACCCAGCTCTTCAGACAGGAACAGAGGAATTGAGATCATTATATAACACAGTGGCAACTCTTTATTGTGTACATAGTAACATAGAGGTACGAGACACCAAGGAAGCCTTAGACAAGATAGAGGAAGAACAAAACAAAAGTCAGCAAAAAACACAGCAGGCACAAGCGGCTGATGGAAAGGTCAGTCAAAATTATCCTATAGTGCAGAATGTCCAAGGGCAAATGGTACACCAGCCCATATCACCTAGGACTTTGAATGCATGGGTAAAAGTAATAGAGGAGAAGGCTTTTAGCCCAGAGGTAATACCCATGTTTACAGCATTATCAGAAGGAGCCACCTCACAAGATTTAAACACCATGTTAAATACAATAGGGGGACATCAAGCAGCCATGCAAATGTTAAAAGATACCATCAATGAGGAGGCTGCAGAATGGGATAGGTTACATCCAGTGCATGCAGGGCCTGTTGCACCAGGCCAAATGAGAGAACCAAGGGGAAGTGAC", "id": "6878", "genomes": ["Malawi"] }, { "length": 602, "Belarus": [902], "name": "HIV", "sequence": "TATGGGCAAGCAGGGAGCTGGAAAGATTCGCGCTTAACCCTAGCCTTTTAGAAACATCAGAAGGATGTCAACAAATACTGGAGCAGTTACAATCAACTCTCAAGACAGGATCAGAAGAACTTAAATCATTATATAATACAGTAGCAACCCTCTATTGTGTACATCAACGGATAGAAATAAAAGACACCAAGGAAGCTTTAGATAAAATAGAGGAAATACAAAATAAGAGCAAGCAAAAGACCCAGCAGGCAGCAACTGGCACAGGAAGCAGCAGCAAGGTCAGTCAAAATTACCCCATAGTGCAAAATGCACAAGGGCAAATGATACACCAGTCCATGTCGCCTAGGACTTTGAATGCATGGGTGAAAGTAATAGAAGAAAAGGCTTTCAGCCCAGAAGTAATACCCATGTTTTCAGCATTGTCAGAGGGAGCCACCCCACAAGATTTAAACATGATGCTGAACATAGTGGGGGGACACCAGGCAGCTATGCAAATGTTGAAAGATACCATCAATGAGGAAGCTGCTGAATGGGATAGGTTACATCCAGCACAGGCAGGGCCTTTTCCACCAGGGCAGATGAGAGAACCAAGGGGAAGTGAC", "id": "6877", "genomes": ["Belarus"] }, { "Malawi": [772], "length": 38, "Belarus": [779], "name": "HIV", "sequence": "CGGAGGCTAGAAGGAGAGAGATGGGTGCGAGAGCGTCA", "id": "6867", "genomes": ["Belarus", "Malawi"] }, { "Malawi": [786], "length": 129, "name": "HIV", "sequence": "AGAGAGATGGGTGCGAGAGCGTCAATATTAAGAGGGGGAAAATTAGATAAATGGGAAAGAATTAGATTAAGGCCAGGGGGAAAGAAACACTATATGATAAAGCATCTAGTATGGGCAAGCAGGGAGCTG", "id": "6869", "genomes": ["Malawi"] }, { "length": 129, "Belarus": [793], "name": "HIV", "sequence": "AGAGAGATGGGTGCGAGAGCGTCAGTATTAAGCGGGGGAAAATTAGATGCATGGGAAAAAATTCGGTTAAGGCCAGGGGGAAAGAAAAAATATAAAATAAAACACCTAGTATGGGCAAGCAGGGAGCTG", "id": "6868", "genomes": ["Belarus"] }, { "Malawi": [687], "length": 109, "name": "HIV", "sequence": "TCGACGCAGGACTCGGCTTGCTGAAGTGCACTCGGCAAGAGGCGAGAGGGGCGACTGGTGAGTACGCCAAATTTTATTTGACTAGCGGAGGCTAGAAGGAGAGAGATGG", "id": "6940", "genomes": ["Malawi"] }, { "length": 109, "Belarus": [694], "name": "HIV", "sequence": "TCGACGCAGGACTCGGCTTGCTGAGGTGCACACAGCAAGAGGCGAGAGCGGTGACTGGTGAGTACGCCTAAAGATTTTTGACTAACGGAGGCTAGAAGGAGAGAGATGG", "id": "6939", "genomes": ["Belarus"] }, { "Malawi": [891], "length": 28, "Belarus": [898], "name": "HIV", "sequence": "CTAGTATGGGCAAGCAGGGAGCTGGAAA", "id": "6876", "genomes": ["Belarus", "Malawi"] }, { "Malawi": [553, 9622], "length": 49, "name": "HIV", "sequence": "AAGTAGTGTGTGCCCGTCTGTTGTGTGACTCTGGTAACTAGAGATCCCT", "id": "6883", "genomes": ["Malawi"] }, { "Malawi": [578, 9647], "length": 30, "Belarus": [587, 9629], "name": "HIV", "sequence": "TGACTCTGGTAACTAGAGATCCCTCAGACC", "id": "6884", "genomes": ["Belarus", "Malawi"] }, { "Malawi": [584, 9653], "length": 52, "name": "HIV", "sequence": "TGGTAACTAGAGATCCCTCAGACCTTTTTGGTAGCGTGGAAAATCTCTAGCA", "id": "6885", "genomes": ["Malawi"] }, { "length": 53, "Belarus": [593, 9635], "name": "HIV", "sequence": "TGGTAACTAGAGATCCCTCAGACCACTCTAGACGGTGTAAAAAATCTCTAGCA", "id": "6914", "genomes": ["Belarus"] }, { "length": 49, "Belarus": [562, 9604], "name": "HIV", "sequence": "AAGTAGTGTGTGCCCGTCTGTTGTATGACTCTGGTAACTAGAGATCCCT", "id": "6913", "genomes": ["Belarus"] }, { "Malawi": 67, "length": "103", "Belarus": 67, "name": "HIV", "sequence": "ATGAGAGAACCAAGGGGAAGTGACATAGCAGGAACTACTAGTACCCTTCARAACAAATTATAAAAATTCAAAATTTYCGGGTTTATTACAGGGACAGCAGAGA", "id": "6977", "genomes": ["Belarus", "Malawi"] }], "edges": [{ "source": 0, "type": "cont", "target": 1 }, { "source": 0, "type": "cont", "target": 2 }, { "source": 3, "type": "cont", "target": 0 }, { "source": 4, "type": "cont", "target": 0 }, { "source": 2, "type": "cont", "target": 5 }, { "source": 0, "type": "cont", "target": 2 }, { "source": 1, "type": "cont", "target": 5 }, { "source": 0, "type": "cont", "target": 1 }, { "source": 7, "type": "cont", "target": 6 }, { "source": 7, "type": "cont", "target": 8 }, { "source": 9, "type": "cont", "target": 7 }, { "source": 10, "type": "cont", "target": 7 }, { "source": 7, "type": "cont", "target": 8 }, { "source": 7, "type": "cont", "target": 6 }, { "source": 11, "type": "cont", "target": 12 }, { "source": 11, "type": "cont", "target": 13 }, { "source": 14, "type": "cont", "target": 11 }, { "source": 15, "type": "cont", "target": 11 }, { "source": 13, "type": "cont", "target": 16 }, { "source": 11, "type": "cont", "target": 13 }, { "source": 12, "type": "cont", "target": 16 }, { "source": 11, "type": "cont", "target": 12 }, { "source": 16, "type": "cont", "target": 9 }, { "source": 16, "type": "cont", "target": 10 }, { "source": 12, "type": "cont", "target": 16 }, { "source": 13, "type": "cont", "target": 16 }, { "source": 10, "type": "cont", "target": 7 }, { "source": 16, "type": "cont", "target": 10 }, { "source": 9, "type": "cont", "target": 7 }, { "source": 16, "type": "cont", "target": 9 }, { "source": 17, "type": "cont", "target": 18 }, { "source": 18, "type": "cont", "target": 19 }, { "source": 18, "type": "cont", "target": 20 }, { "source": 21, "type": "cont", "target": 18 }, { "source": 17, "type": "cont", "target": 18 }, { "source": 19, "type": "cont", "target": 3 }, { "source": 18, "type": "cont", "target": 19 }, { "source": 3, "type": "cont", "target": 0 }, { "source": 19, "type": "cont", "target": 3 }, { "source": 21, "type": "cont", "target": 18 }, { "source": 20, "type": "cont", "target": 4 }, { "source": 18, "type": "cont", "target": 20 }, { "source": 4, "type": "cont", "target": 0 }, { "source": 20, "type": "cont", "target": 4 }, { "source": 5, "type": "cont", "target": 14 }, { "source": 5, "type": "cont", "target": 15 }, { "source": 1, "type": "cont", "target": 5 }, { "source": 2, "type": "cont", "target": 5 }, { "source": 15, "type": "cont", "target": 11 }, { "source": 5, "type": "cont", "target": 15 }, { "source": 14, "type": "cont", "target": 11 }, { "source": 5, "type": "cont", "target": 14 }] };
+
+
+    //Initialize a default force layout, using the nodes and edges in dataset
+    var force = d3.layout.force()
+         .nodes(dataset.nodes)
+         .links(dataset.edges)
+         .size([w, h])
+         .linkDistance([70]);
+
+    //Create SVG container element
+    var svg = d3.select("body")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("class", "svg-container")
+
+    //Build the arrow
+    svg.append("defs").selectAll("marker")
+      .data(["suit", "licensing", "resolved"])
+      .enter().append("marker")
+      .attr("id", function (d) { return d; })
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 50)
+      //.attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5 L10,0 L0, -5")
+      .style("stroke", "#ccc");
+
+
+    //Create edges as lines
+    var edges = svg.selectAll("line")
+      .data(dataset.edges)
+      .enter()
+      .append("line")
+      .attr("marker-end", "url(#suit)") //Add the arrow
+      .style("stroke", "#ccc")
+      .style("stroke-width", 1);
+
+
+
+    // Create node size scale:
+    var seqs = [];
+    for (var i = 0; i < dataset.nodes.length; i++) {
+      var node = dataset.nodes[i];
+      if (node.out == 'yes') { continue; };
+
+      l = parseInt(node.length);
+      seqs.push(l);
+    };
+    var max_seq = Math.max.apply(Math, seqs);
+
+    var scale = d3.scale.log()
+          .domain([kmer, max_seq])
+          .range([r, 25]);
+    function size(d) { return d.out !== 'yes' ? scale(parseInt(d.length)) : r; }
+
+
+    // Create the groups under svg
+    var gnodes = svg.selectAll('g.gnode')
+      .data(dataset.nodes)
+      .enter()
+      .append('g')
+      .classed('gnode', true);
+
+    // Add one circle in each group
+    var node = gnodes.append("path")
+        .attr("class", "node")
+        .attr("d", function (d) { return raindrop(size(d)); })
+        .style("fill", function (d) { return def_color; })
+        .style("stroke", "white")
+        .style("visibility", function (d) {
+          return d.out == "yes" ? "hidden" : "visible";
+        })
+        .call(force.drag);
+
+    function raindrop(size) {
+      var r = size;
+      return "M" + r + ",0"
+        + "A" + r + "," + r + " 0 1,1 " + -r + ",0"
+        + "C" + -r + "," + -r + " 0," + -r + " 0," + -3 * r
+        + "C0," + -r + " " + r + "," + -r + " " + r + ",0"
+        + "Z";
+    }
+
+    //add an orientation member to each node
+    dataset.nodes.forEach(function (n, i, a) {
+      n.orientation = {
+        sinkCount: 0,
+        totalX: 0,
+        totalY: 0,
+        reset: function () {
+          this.sinkCount = this.totalX = this.totalY = 0;
+        }
+      };
+      Object.defineProperty(n, "angle", {
+        get: function () {
+          var o = this.orientation;
+          //angle of average vector
+          return o.sinkCount ? Math.atan2(o.totalY / o.sinkCount, o.totalX / o.sinkCount) * 180 / Math.PI : 0;
+        }
+      });
+    });
+    function limitAngle(x) {
+      var pi = Math.PI;
+      return (x  > pi) ? 2 * pi - x : (x < -pi) ? 2 * pi + x : x;
+    }
+    //add link behaviour to tweek source node angle
+    dataset.edges.forEach(function (l, i, a) {
+      Object.defineProperties(l, {
+        "angle": {
+          get: function () {
+            var s = this.source, t = this.target;
+            return Math.atan2(-(t.y - s.y), t.x - s.x);
+          }
+        },
+        "visitTarget": {
+          value: function () {
+            var n1 = this.target, n2 = this.source, t = n1.orientation;
+            t.totalX += (n2.x - n1.x);
+            t.totalY += -(n2.y - n1.y);
+            t.sinkCount += 1;
+          }
+        }
+      })
+    });
+
+    force.charge([-300])
+        .start();
+
+    //Every time the simulation "ticks", this will be called
+    force.on("tick", function () {
+
+      edges.attr("x1", function (d) { return d.x1 = d.source.x; })
+         .attr("y1", function (d) { return d.y1 = d.source.y; })
+         .attr("x2", function (d) { return d.x2 = d.target.x; })
+         .attr("y2", function (d) { return d.y2 = d.target.y; });
+
+      dataset.nodes.forEach(function (n, i, a) {
+        n.orientation.reset();
+      });
+      dataset.edges.forEach(function (e, i, a) {
+        e.visitTarget();
+      });
+
+      node.attr("transform", function (d) {
+        return 'translate(' + [d.x, d.y] + ') rotate(' + -(d.angle + 90) + ")"
+      });
+    });
+
+
+
+    function x() {
+      //add an orientation member to each node
+      dataset.nodes.forEach(function (n, i, a) {
+        n.orientation = {
+          sinkCount: 0,
+          totalX: 0,
+          totalY: 0,
+          reset: function () {
+            this.sinkCount = this.totalX = this.totalY = 0;
+          }
+        };
+        Object.defineProperty(n, "angle", {
+          get: function () {
+            var o = this.orientation;
+            //angle of average vector
+            return o.sinkCount ? Math.atan2(o.totalY / o.sinkCount, o.totalX / o.sinkCount) * 180 / Math.PI : 0;
+          }
+        });
+      });
+      function limitAngle(x) {
+        var pi = Math.PI;
+        return (x > pi) ? 2 * pi - x : (x < -pi) ? 2 * pi + x : x;
+      }
+      //add link behaviour to tweek source node angle
+      dataset.edges.forEach(function (l, i, a) {
+        Object.defineProperties(l, {
+          "angle": {
+            get: function () {
+              var s = this.source, t = this.target;
+              return Math.atan2(-(t.y - s.y), t.x - s.x);
+            }
+          },
+          "visitTarget": {
+            value: function () {
+              var n1 = this.target, n2 = this.source, t = n1.orientation;
+              t.totalX += (n2.x - n1.x);
+              t.totalY += -(n2.y - n1.y);
+              t.sinkCount += 1;
+            }
+          }
+        })
+      });
+      var labels = gnodes.append("text")
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .attr("x", 0).attr("y", 0),
+      //edge labels
+          edgeLabels = svg.selectAll("text.edge")
+          .data(dataset.edges)
+          .enter()
+          .append("text")
+          .attr("class", "edge")
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .attr("x", 0).attr("y", 0);
+
+
+      force.charge([-300])
+          .start();
+
+      //Every time the simulation "ticks", this will be called
+      force.on("tick", function () {
+
+        edges.attr("x1", function (d) { return d.x1 = d.source.x; })
+           .attr("y1", function (d) { return d.y1 = d.source.y; })
+           .attr("x2", function (d) { return d.x2 = d.target.x; })
+           .attr("y2", function (d) { return d.y2 = d.target.y; });
+
+        dataset.nodes.forEach(function (n, i, a) {
+          n.orientation.reset();
+        });
+        dataset.edges.forEach(function (e, i, a) {
+          e.visitTarget();
+        });
+
+        labels
+          .text(function (d, i) {
+            return d3.format("6.1f")(d.angle) + ", " + d.orientation.sinkCount + ", " + i
+          })
+          .attr("transform", function (d) {
+            return 'translate(' + [d.x, d.y] + ')';
+          });
+
+        edgeLabels
+          .attr("transform", function (d) {
+            return 'translate(' + [d.x1 + (d.x2 - d.x1) / 2, d.y2 + (d.y1 - d.y2) / 2] + ')';
+          })
+          .text(function (d) {
+            var x;
+            return d3.format("6.1f")(limitAngle(d.angle - Math.PI) * 180 / Math.PI);
+          });
+
+        node.attr("transform", function (d) {
+          return 'translate(' + [d.x, d.y] + ') rotate(' + -(d.angle + 90) + ")"
+        });
+      });
+    }
+
+  </script>
+</body>
+</html>

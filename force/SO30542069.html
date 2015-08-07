@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Existing nodes freeze upon new data entering</title>
+  <style>
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+  </style>
+</head>
+<body>
+  <script src="d3 CB.js"></script>
+  <script>
+    var width = 300,
+        height = 200;
+
+    var color = d3.scale.category10();
+
+    var force = d3.layout.force()
+        .charge(-120)
+        .linkDistance(30)
+        .size([width, height]);
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var graph = {
+      "nodes": [
+        { "name": "Glare", "group": 1 },
+        { "name": "Inattention", "group": 1 },
+        { "name": "SoHo", "group": 2 },
+        { "name": "East Village", "group": 2 },
+        { "name": "NoHo", "group": 2 }
+      ],
+      "links": [
+        { "source": 1, "target": 0, "value": 1 },
+        { "source": 2, "target": 0, "value": 8 },
+        { "source": 3, "target": 0, "value": 10 },
+        { "source": 3, "target": 2, "value": 6 },
+        { "source": 4, "target": 0, "value": 1 }
+      ]
+    }
+    var link;
+    var node;
+
+
+    force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .on("tick", function () {
+      link.attr("x1", function (d) { return d.source.x; })
+          .attr("y1", function (d) { return d.source.y; })
+          .attr("x2", function (d) { return d.target.x; })
+          .attr("y2", function (d) { return d.target.y; });
+
+      node.attr("cx", function (d) { return d.x; })
+          .attr("cy", function (d) { return d.y; });
+      });
+
+    start(graph);
+
+    window.setTimeout(function () {
+      graph.nodes.push({ "name": "Westby", "group": 2 })
+      graph.links.push({ "source": 5, "target": 2, "value": 1 })
+      start(graph);
+    }, 2000);
+
+    function start(graph) {
+      //UPDATE  pre-existing nodes to be re-cycled
+      link = svg.selectAll(".link")
+          .data(graph.links);
+      //ENTER new nodes to be created
+      link.enter().insert("line", "circle.node")
+          .attr("class", "link")
+      //UPDATE+ENTER  .enter also merges update and enter, link is now both
+      link.style("stroke-width", function (d) { return Math.sqrt(d.value); });
+      //EXIT
+      link.exit().remove()
+      //UPDATE
+      node = svg.selectAll(".node")
+          .data(graph.nodes)
+      //ENTER
+      node.enter().append("circle")
+          .attr("class", "node")
+          .attr("r", 5)
+          .call(force.drag);
+      //UPDATE+ENTER  .enter also merges update and enter, link is now both
+      node.style("fill", function (d) { return color(d.group); })
+      //EXIT
+      node.exit().remove();
+
+      console.log(node.datum());
+
+      node.append("title")
+          .text(function (d) { return d.name; });
+
+      force.start();
+    }
+    function startOld(graph) {
+      force
+        .nodes(graph.nodes)
+        .links(graph.links);
+
+      link = svg.selectAll(".link")
+          .data(graph.links)
+        .enter().append("line")
+          .attr("class", "link")
+          .style("stroke-width", function (d) { return Math.sqrt(d.value); });
+
+      node = svg.selectAll(".node")
+          .data(graph.nodes)
+          .call(force.drag)
+        .enter().append("circle")
+          .attr("class", "node")
+          .attr("r", 5)
+          .style("fill", function (d) { return color(d.group); })
+          .call(force.drag);
+
+      node.append("title")
+          .text(function (d) { return d.name; });
+      force.start();
+    }
+
+    d3.layout.force = function () {
+      var force = {},
+          //...
+          nodes = [], links = [], distances, strengths, charges;
+      //...
+      force.nodes = function (x) {
+        if (!arguments.length) return nodes;
+        nodes = x;
+        return force;
+      };
+      force.links = function (x) {
+        if (!arguments.length) return links;
+        links = x;
+        return force;
+      };
+      //...
+    }
+
+  </script>
+</body>
+</html>

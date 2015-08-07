@@ -1,0 +1,184 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+  <style>
+    svg {
+      outline: 1px solid red;
+      display: block;
+    }
+
+    div {
+      display: inline-block;
+    }
+    #method {
+      margin-left: 20px;
+    }
+    .input {
+      display: block;
+      width: 50%;
+      /*outline: 1px solid red;*/
+      position: relative;
+      margin: 10px;
+    }
+
+    #slider {
+      width: 200px;
+      margin: auto 10px auto 10px;
+      bottom: -0.18em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="input">
+    <span>method: </span>
+    <select id="method">
+      <option value="direct" selected="selected">direct</option>
+      <option value="canonical">canonical</option>
+    </select>
+  </div>
+
+  <div class="input">gravity: <div id="slider"></div></div>
+  <script src="jQuery/jquery-1.11.1.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+  <script src="d3/d3 CB.js"></script>
+  <script>
+    var w = 900, h = 400, nodes = [];
+
+    var svg = d3.select("body").append("svg")
+    .attr("width", w)
+    .attr("height", h)
+
+    var force = d3.layout.force()
+      .nodes(nodes)
+    .size([w, h])
+    .gravity(0)
+    .charge(1)
+    .friction(0.7);
+
+    var gScale = d3.scale.linear()
+        .domain([0, 100])
+        .range([0, 1]);
+
+    $("#slider").slider({
+      value: gScale.invert(force.gravity()),
+      max: 100,
+      stop: function (e, ui) {
+        force.gravity(gScale(ui.value)).alpha(0.0051)
+      }
+    })
+
+    var updateMethods = {}, updateMethod;
+
+    d3.select("#method").on("change", function () {
+      nodes = [];
+      updateMethod = updateMethods[this.value]()
+    })
+
+    force.on("tick", function (e) {
+      log.update(e.alpha)
+      svg.selectAll("circle")
+      .attr("cx", function (d) { return d.x; })
+      .attr("cy", function (d) { return d.y; });
+    });
+
+    svg.on("mousemove", function () {
+      updateMethod.call(this)
+    });
+
+    function canonical() {
+      force.nodes(nodes);
+      return function () {
+        var point = d3.mouse(this),
+          node = { x: point[0], y: point[1] };
+
+        nodes.push(node);
+
+        svg.selectAll("circle")
+        .data(nodes)
+        .enter().append("circle")
+        .attr("r", 1e-6)
+        .transition("in")
+        .attr("r", 4.5)
+        .transition("out")
+        .delay(1000)
+        .attr("r", 1e-6)
+        .remove()
+        .each("end.out", (function (n) {
+          return function (d) {
+            //console.log("length: " + nodes.length + "\tdeleting " + i)
+            var i = nodes.indexOf(n);
+            nodes.splice(i, 1)
+          }
+        })(node));
+
+        force.start();
+      }
+    } /*canonical*/
+
+    function direct() {
+      return function () {
+        var point = d3.mouse(this),
+            node = { x: point[0], y: point[1] };
+
+        svg.append("circle")
+              .data([node])
+                  .attr("r", 1e-6)
+                  .transition()
+                  .attr("r", 4.5)
+                  .transition()
+                  .delay(1000)
+                  .attr("r", 1e-6)
+                  .remove();
+        force.nodes().push(node);
+        force.start();
+      }
+    } /*direct*/
+
+    updateMethods.canonical = canonical;
+    updateMethods.direct = direct;
+    updateMethod = direct();
+
+
+
+    function OutputDiv(on, style, after) {
+      function _OutputDiv(on, style, after) {
+        var _sel = d3.select(on), id = "ouputDiv" + ~~(Math.random() * 1000),
+            defStyle = {
+              margin: '50px 0 10px 10px',
+              padding: '3px',
+              display: 'inline-block',
+              'background-color': '#ccc'
+            };
+        if (after) {
+          _sel = _sel.insert('div', after)
+        } else {
+          _sel = _sel.append('div')
+        }
+        _sel = _sel.style(style ? style : defStyle)
+          .attr("id", "ouputDiv" + id)
+          .attr("class", "ouputDiv")
+        this.selection = _sel
+      }
+      _OutputDiv.prototype.update = function (value) {
+        this.selection.text(this.message(value))
+        return this
+      }
+      _OutputDiv.prototype.message = function (value) {
+        return value
+      }
+      return new _OutputDiv(on, style, after)
+    }
+    var log = OutputDiv(document.body, null, "script")
+    log.message = function (value) {
+      return 'alpha: ' + d3.format(".3f")(value)
+           + '\tgravity: ' + d3.format(".3f")(force.gravity())
+           + "\t nodes: " + force.nodes().length
+    }
+
+    log.update(force.alpha(0.0051).alpha())
+  </script>
+</body>
+</html>

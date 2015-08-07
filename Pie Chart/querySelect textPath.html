@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    text { 
+      fill: black;
+    }
+  </style>
+</head>
+<body>
+  <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>-->
+  <script src="d3/d3 CB.js"></script>
+  <script>
+    window.onload = function () {
+
+      var width = window.innerWidth,
+          height = window.innerHeight,
+          svg = d3.select(document.body).append("svg")
+          .attr("height", height)
+          .attr("width", width),
+          arc = d3.svg.arc()
+            .innerRadius(100)
+            .outerRadius(100)
+            .startAngle(0)
+            .endAngle(Math.PI / 2);
+      panel("textPath", 1);
+      panel("textpath", 2);
+
+      function panel(tp, id) {
+        var offset = [width / 8, width / 2],
+            group = svg.append("g")
+            .attr("transform", "translate(" + [offset[id - 1], 2 * height / 3] + ")");
+
+        group.append("text").attr("y", -120).text(tp)
+        group.append("path")
+              .attr("d", arc)
+              .attr("stroke", "black")
+              .attr("id", "path" + id);
+        group.append("text")
+              .append(tp)
+              .attr("xlink:href", "#path" + id)
+              .text("test text");
+        group.append("text")
+              .text("other text");
+
+        group.append("text")
+          .text("textPath selection size: " + group.selectAll("text")
+            .filter(function () {
+              var p = d3.select(this).selectAll(tp);
+              return p.size() && p.attr("xlink:href") == "#path" + id
+            }).size())
+          .attr("y", 50)
+      };
+    };
+  </script>
+</body>
+</html>

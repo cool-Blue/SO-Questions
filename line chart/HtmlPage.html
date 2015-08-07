@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    .axis path {
+      stroke: black;
+      fill: none;
+    }
+    .axis line {
+    }
+  </style>
+</head>
+<body>
+  <script src="d3 CB.js"></script>
+  <script>
+
+    var disp1 = d3.dispatch('e1', 'e2', 'e3'),
+        disp2 = d3.dispatch('e1', 'e2', 'e3'),
+        disp3 = d3.dispatch('e1', 'e2', 'e3'),
+        disp4 = d3.dispatch('e1', 'e2', 'e3');
+
+    var transLog = function () {
+      var events = {}, inst = 0;
+      return function (event, transName, message, reset) {
+        if ((typeof message === 'boolean' && message) || reset) { events = {}, inst = 0 }
+        message = typeof message === 'boolean' ? null : message
+        if (!events.hasOwnProperty(transName)) { events[transName] = ++inst }
+        return function (transition) {
+          var k = inst, tab = ind(k);
+            if (transition.each) {
+              if (typeof message === string) {}
+              transition.each(event, function (d, i) {
+                console.log(tab + transName + ' : ' + event + " : " + (d ? d.name : k) + (message ? message : ""))
+              })
+            } else {
+              transition.on(event, function (d, i) {
+                console.log(tab + ' ::::' + k)
+              })
+            }
+          }
+      };
+
+      function ind(i) {
+        var tab = '\t'
+        for (var k = 1 ; k < i * 5 ; k++) { tab += '\t' }
+        return tab
+      }
+    }();
+    
+    transLog('e1', 'disp1')(disp1)
+    transLog('e2', 'disp2')(disp2)
+    transLog('e3', 'disp3')(disp3)
+    transLog('e3', 'disp4')(disp4)
+
+    disp1.e1()
+    disp2.e2()
+    disp3.e3()
+    disp4.e3()
+
+    var n = 40,
+        colors = ['red', 'green'],
+        margin = { top: 20, right: 20, bottom: 20, left: 40 },
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom,
+
+        div = d3.select('body').append('div')
+        .style('display', 'inline-block')
+        .text('tool tip'),
+
+        exitLine = [];
+
+    for (var i = 0 ; i < n ; i++) exitLine.push(0);
+
+    var x = d3.scale.linear()
+        .domain([0, n - 1])
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .domain([-1, 1])
+        .range([height, 0]);
+
+    var line = d3.svg.line()
+        .x(function (d, i) {
+          return x(i);
+        })
+        .y(function (d, i) {
+          return y(d);
+        });
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + y(0) + ")")
+        .call(d3.svg.axis().scale(x).orient("bottom"));
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(d3.svg.axis().scale(y).orient("left"));
+
+    function update() {
+
+      //bind data
+      var random = d3.random.normal(0, .2),
+          dataArray = d3.range(n).map(random),
+          names = ['series1' + Math.round(Math.random()*3), 'series2' + Math.round(Math.random() * 3)],
+          seriesData = [{ name: names[0], values: d3.range(n).map(random) },
+                    { name: names[1], values: d3.range(n).map(random) }];
+      console.log(names[0] + '\t' + names[1]);
+  //LEGEND/////////////////
+
+      //UPDATE
+      var legendUpdate = d3.select('body').selectAll('.legend')
+        .data(names, function (d, i) { return d || this.textContent }),
+      //EXIT
+      legendExit = legendUpdate.exit().remove(),
+      //ENTER
+      legendEnter = legendUpdate.enter().append('div')
+        .style('display', 'inline-block')
+        .style('margin', '2em')
+        .style('background-color', '#ccc')
+        .transition()
+        .style('background-color', 'white'),
+      //UPDATE + ENTER
+      legend = legendUpdate.attr('class', 'legend')
+        .text(function (d, i) { return d })
+        .style('color', function (d, i) { return colors[i]}),
+
+  //SERIES///////////////////
+
+      //UPDATE
+      gUpdate = svg.selectAll("g.series")
+        .data(seriesData, function (d) { return d.name; }),
+
+      //ENTER
+      gEnter = gUpdate.enter()
+      .append("g")
+        .attr("class", "series"),
+
+       pathsEnter = gEnter.append("path"),
+
+        pE1 = pathsEnter.attr("class", "series path")
+          .attr('fill', 'none')
+          .attr('stroke', function (d, i) { return colors[i] })
+          .attr('stroke-width', '10px')
+          .on("mouseover", function (d, i) {
+            div.transition("tooltipIn")
+                .duration(200)
+                .style("opacity", .9)
+                .text(function () {
+                  return d.name
+                })
+                .call(function () {
+                  legend.transition('legend')
+                    .duration(200)
+                  .style('background-color', function (d, k) {
+                    return k === i ? '#ccc' : 'white'
+                  })
+                })
+          })
+              .on("mouseout", function (d) {
+                div.transition("tooltipOut")
+                    .duration(500)
+                    .style("opacity", 0)
+                    .call(function () {
+                      legend.transition('legend')
+                        .duration(1000)
+                        .style('background-color', 'white')
+                      })
+                ;
+              }),
+
+      //UPDATE + ENTER
+      newlines = gUpdate.selectAll('path')
+        .attr("opacity", 0)
+        .attr("d", function (d, i) { return line(exitLine); }),
+
+      newlinesTrans = newlines
+        .transition('pathEnter')
+          .duration(1000)
+          .attr("opacity", 0.8)
+          .attr("d", function (d) {
+            return line(d.values)
+          })
+          .each('start.interlock', function () { d3.select(this).interrupt('pathExit') })
+          .call(transLog('start.pathEnter', 'pathEnter'))
+          .call(transLog('interrupt.pathEnter', 'pathEnter', '********************'))
+          .call(transLog('end.pathEnter', 'pathEnter')),
+
+      //EXIT
+      exitGs = gUpdate.exit(),
+
+      exitGsTrans = exitGs
+        .transition('gTrans')
+          .duration(1000)
+          .call(transLog('start.gTrans', 'gTrans'))
+          .call(transLog('interrupt.gTrans', 'gTrans', '********************'))
+          .call(transLog('end.gTrans', 'gTrans'))
+          .remove(),
+
+      exitLinesTrans = exitGs.selectAll("path")
+        .transition("pathExit")
+          .duration(1000)
+          .attr("opacity", 0)
+          .attr("d", function (d, i) { return line(exitLine); })
+          .call(transLog('start.pathExit', 'pathExit', true))
+          .call(transLog('interrupt.pathExit', 'pathExit', '********************'))
+          .call(transLog('end.pathExit', 'pathExit'));
+
+      //svg.select(".y.axis")
+      //  .transition("yaxisTrans")
+      //  .duration(2000)
+      //  .call(y)
+      //  .call(transLog('start.yaxisTrans', 'yaxisTrans'))
+      //  .call(transLog('interrupt.yaxisTrans', 'yaxisTrans'))
+      //  .call(transLog('end.yaxisTrans', 'yaxisTrans'))
+
+      //svg.select(".x.axis")
+      //    .transition("xaxisTrans")
+      //    .duration(2000)
+      //    .call(x)
+      //  .call(transLog('start.xaxisTrans', 'xaxisTrans'))
+      //  .call(transLog('interrupt.xaxisTrans', 'xaxisTrans'))
+      //  .call(transLog('end.xaxisTrans', 'xaxisTrans'))
+
+
+      //gUpdate.select("transition")
+      //       .each("interrupt", function (d) { console.log("interrupted"); })
+
+    } /*update*/
+
+    window.onclick = update
+    update()
+  </script>
+</body>
+</html>

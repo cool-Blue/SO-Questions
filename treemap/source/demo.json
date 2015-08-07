@@ -1,0 +1,24 @@
+{"name": "root", "children": 
+    [{"name": "branch_A", "children": 
+        [{"name": "A_leaf", "size": 1},
+        {"name": "A_leaf", "size": 1},
+        {"name": "A_leaf", "size": 1},
+        {"name": "A_leaf", "size": 1},
+        {"name": "A_leaf", "size": 1}, 
+         {"name": "A_leaf", "size": 1}]},
+    {"name": "branch_B", "children": 
+        [{"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1},
+        {"name": "B_leaf", "size": 1}, 
+         {"name": "B_leaf", "size": 1}]},
+    {"name": "branch_C", "children": 
+        [{"name": "C_leaf", "size": 1},
+        {"name": "C_leaf", "size": 1},
+        {"name": "C_leaf", "size": 1}, 
+         {"name": "C_leaf", "size": 1}]}]}

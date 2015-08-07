@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title></title>
+	<style>
+	body, html {
+			width:100%;
+			height:100%;
+	}
+		#vizcontainer {
+			width: 100%;
+			height: 100%;
+		}
+
+	 svg {
+			outline: 1px solid red;
+			width: 100%;
+			height: 100%;
+		}
+
+		#output {
+			pointer-events: none;  
+			display: inline-block;
+			z-index: 1;
+			margin: 10px;
+		}
+
+		button {
+			display: inline-block;
+			margin: 10px;
+		}
+		.dead {
+			fill: white;
+			stroke: black;
+			stroke-width: 1px;
+		}
+	</style>
+</head>
+<body>
+	<button id="toggleShow" name="">show dead nodes</button>
+	<button id="clear" name="clear">clear</button>
+	<script src="jQuery/jquery-1.11.1.min.js"></script>
+	<script src="d3/d3 CB.js"></script>
+	<script>
+		var w = 900, h = 400, nodes = [],
+				indx = 0, show = false,
+
+		    svg = d3.select("body").append("svg")
+		    .attr("width", w)
+		    .attr("height", h),
+
+		    force = d3.layout.force()
+		    .nodes(nodes)
+		    .size([w, h])
+		    .gravity(0)
+		    .charge(1)
+		    .friction(0.7),
+
+		    outputDiv = d3.select("body").insert("div", "svg").attr("id", "output");
+
+		$("#toggleShow").click(function (e) {
+			d3.selectAll(".dead").attr("opacity", (show = !show) ? 0.2 : 0)
+			$(this).text((show ? "don't " : "") + "show dead nodes")
+		});
+		$("#clear").click(function (e) {
+			nodes.length = 0;
+			d3.selectAll("circle").remove();
+		});
+
+
+		force.on("tick", function (e) {
+			outputDiv.text("alpha:\t" + d3.format(".3f")(force.alpha())
+				+ "\tnodes:\t" + force.nodes().length)
+
+			var circles = svg.selectAll("circle")
+					.data(nodes, function (d) { return d.id })
+
+			//ENTER
+			//  direct
+			//    data is there but the circle has been deleted by completion of transition
+			//    replace the previously live node with a dead one
+			//  idiomatic
+			//    always zero size
+			circles.enter().append("circle")
+				.attr("r", 4.5)
+				.attr("class", "dead")
+			.attr("opacity", show ? 0.2 : 0);
+			//UPDATE+ENTER
+			circles
+				.attr("cx", function (d) { return d.x; })
+				.attr("cy", function (d) { return d.y; });
+		});
+
+		svg.on("mousemove", onMove)
+		.on("touchmove", onMove)
+		.on("touchstart", onMove);
+
+		function onMove() {
+			d3.event.preventDefault();
+			d3.event.stopPropagation();
+			updateMethod.call(this)
+		}
+
+		function direct() {
+			return function () {
+				var pointM = d3.mouse(this), pointT = d3.touches(this),
+						point = pointT.length ? pointT[0] : pointM,
+						node = { x: point[0], y: point[1], id: indx++ };
+
+				svg.append("circle")
+							.data([node])
+									.attr("class", "alive")
+									.attr("r", 1e-6)
+									.transition()
+									.attr("r", 4.5)
+									.transition()
+									.delay(1000)
+									.attr("r", 1e-6)
+									.remove();
+				force.nodes().push(node);
+				force.start();
+			}
+		} /*direct*/
+
+
+		updateMethod = direct();
+
+	</script>
+</body>
+</html>

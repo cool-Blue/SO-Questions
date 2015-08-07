@@ -1,0 +1,344 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+		<title></title>
+	<style>
+		div {
+			display: inline-block;
+		}
+
+	</style>
+</head>
+<body>
+	<script src="jQuery/jquery-1.11.1.min.js"></script>
+	<script src="d3/d3 CB.js"></script>  
+	<script src="Output/Output/Output.js"></script>
+<script>
+	$(function () {
+		var width = $(window).width(),
+			height = $(window).height();
+		var circles = [
+			{
+				x: width / 2 + 100,
+				y: height / 2,
+				radius: 100
+			},
+			{
+				x: width / 2 - 100,
+				y: height / 2,
+				radius: 100
+			},
+			//{
+			//	x: width / 2,
+			//	y: height / 2 + 100,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2 + 100,
+			//	y: height / 2,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2 - 100,
+			//	y: height / 2,
+			//	radius: 100
+			//},
+			//{
+			//	x: width / 2,
+			//	y: height / 2 + 100,
+			//	radius: 100
+			//},
+		],
+		nodeFill = "#006E3C";
+
+		var force = d3.layout.force()
+			.gravity(0)
+			.charge(-100)
+			.friction(1)
+			.size([width, height])
+			.nodes(circles)
+			.linkDistance(250)
+			.linkStrength(1)
+			.on("tick", tick)
+			.on("start", function () {
+				elapsedTime.start()
+			})
+			.start();
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.style("background-color", "white");
+		var nodes = svg.selectAll(".node");
+		nodes = nodes.data(circles);
+		nodes.exit().remove();
+		var enterNode = nodes.enter().append("g")
+			.attr("class", "node")
+			.call(force.drag);
+		console.log(enterNode);
+		//Add circle to group
+		enterNode.append("circle")
+			.attr("r", function (d) {
+				return d.radius;
+			})
+			.style("fill", "#006E3C")
+			.style("opacity", 0.6);
+
+		//Drag behaviour///////////////////////////////////////////////////////////////////
+		//  hook drag behavior on force
+
+		//VELOCITY
+		//  maintain velocity state in case a force tick occurs emidiately before dragend
+		//  the tick wipes out previous position
+		var dragVelocity = (function () {
+			var dx, dy;
+			function f(d) {
+				if (d3.event) {
+					dx = d3.event.dx; dy = d3.event.dy;
+				}
+				return { dx: dx, dy: dy }
+			};
+			f.correct = function (d) {
+				if (true && dx && d.x === d.px && d.y === d.py) {
+					//tick occured and set px/y to x/y, re-establish velocity state
+					d.px = d.x - dx; d.py = d.y - dy;
+				} else {
+					//not used!
+					//velocity state is ok but previous and current are reversed during drag
+					//corect the velocity direction
+					x = d.x; d.x = d.px; d.px = x;
+					y = d.y; d.y = d.py; d.py = y;
+				}
+			}
+			f.reset = function() { dx = dy = 0}
+			return f;
+		})()
+		//DRAGSTART HOOK
+		var stdDragStart = force.drag().on("dragstart.force");
+
+		force.drag().on("dragstart.force", myDragStart);
+
+		function myDragStart(d) {
+			var that = this, node = d3.select(this);
+
+			logEvents.update();
+			elapsedTime.consoleOn = true;
+			elapsedTime.timestamp(arguments,"\t" + d.fixed);
+
+			nonStickyMouse();
+			dragVelocity.reset();
+			stdDragStart.call(this, d)
+
+			function nonStickyMouse() {
+				elapsedTime.timestamp(arguments, (node.on("mouseover.force") != myMouseOver ? "not " : "") + "hooked");
+
+				//if (node.on("mouseover.force") != myMouseOver) {
+				if (!d.___hooked) {
+
+					//node is not hooked
+					//hook mouseover/////////////////////////
+					//remove sticky node on mouseover behavior and save listeners
+					d.___mouseover_force = node.on("mouseover.force");
+					node.on("mouseover.force", myMouseOver);
+
+					d.___mouseout_force = node.on("mouseout.force");
+
+					d.___hooked = true;
+
+					//standard mouseout will clear d.fixed
+					d.___mouseout_force.call(that, d);
+				}
+				//dissable mouseout/////////////////////////
+				node.on("mouseout.force", null);
+
+			}
+			function myMouseOver(d) {
+				logEvents.update();
+				elapsedTime.timestamp(arguments);
+			}
+		}
+		var f = d3.format("6,.0f");
+		//DRAG HOOK
+		var stdDrag = force.drag().on("drag.force");
+		force.drag().on("drag.force", myDrag);
+		function myDrag(d) {
+			var v, p;
+			//maintain back-up velocity state
+			v = dragVelocity();
+			p = { x: d3.event.x, y: d3.event.y };
+			elapsedTime.timestamp(arguments, "\t" + f(p.x) + "\t" + f(p.y) + "\t" + d.fixed);
+			stdDrag.call(this, d)
+		}
+
+		//DRAGEND HOOK
+		var stdDragEnd = force.drag().on("dragend.force");
+
+		force.drag().on("dragend.force", myDragEnd);
+
+		function myDragEnd(d) {
+			var that = this, node = d3.select(this);
+			//var x = d.x, y = d.y;
+			//stop dead
+			//d.px = d.x; d.py = d.y;
+
+			//correct the final velocity vector at drag end
+			dragVelocity.correct(d)
+
+			logEvents.update();
+			elapsedTime.timestamp(arguments, d.fixed);
+
+			//hook mouseout/////////////////////////
+			//re-establish standard behavior on mouseout
+			node.on("mouseout.force", function mouseout(d) {
+				elapsedTime.timestamp(arguments, d.fixed);
+				myForceMouseOut.call(this, d, elapsedTime.t() + "\tmouseout")
+			});
+
+			stdDragEnd.call(that, d);
+
+			function myForceMouseOut(d, timeSet) {
+				var timerID = window.setTimeout((function () {
+					var that = this, node = d3.select(this);
+					return function unhookMouseover() {
+						//if (node.on("mouseover.force") != d.___mouseout_force) {
+						if (node.datum().___hooked) {
+							//un-hook mouseover and mouseout////////////
+							node.on("mouseout.force", d.___mouseout_force);
+							node.on("mouseover.force", d.___mouseover_force);
+							node.datum().___hooked = false;
+
+							elapsedTime.timestamp(arguments, timeSet + "\t" + d.fixed);
+						}
+						//elapsedTime.consoleOn = false;
+					}
+				}).call(this), 500);
+				return timerID;
+			}
+		}
+		function tick(e) {
+			//elapsedTime.timestamp(arguments);
+			log.update(e.alpha);
+			nodes.attr("transform", function (d) {
+				var r = 100;
+				if (d.x - r <= 0 && d.px > d.x) d.px -= (d.px - d.x) * 2;
+				if (d.x + r >= width && d.px < d.x) d.px += (d.x - d.px) * 2;
+				if (d.y - r <= 0 && d.py > d.y) d.py -= (d.py - d.y) * 2;
+				if (d.y + r >= height && d.py < d.y) d.py += (d.y - d.py) * 2;
+				return "translate(" + d.x + "," + d.y + ")";
+
+				function boundary(p, y, b) {
+					p[y] = 2 * b - p[y];
+					p["p"+y] = 2 * b - p["p"+y];
+				}
+			});
+			nodes.selectAll("circle").style("fill", function (d, i) { return ((d.___hooked && !d.fixed) ? "red" : nodeFill) })
+			nodes.each(function(d, i) { if(d.___hooked && !d.fixed) console.log(i + "\thooked but not fixed")})
+			force.start();
+		}
+		g.force = force;
+		g.v = dragVelocity;
+		elapsedTime.message = function (value) {
+			var this_lap
+			return 'time elapsed : ' + d3.format(",.3f")(value)
+					+ ' sec\t' + d3.format(",d")(this.ticks)
+					+ '\ttick time: ' + d3.format(",.3f")(this_lap = this.lap().lastLap)
+							+ '\t(' + d3.format(",.6f")(this.aveLap(this_lap)) + ')'
+			//+ '\ttimer count: ' + (g.force ? d3.timer.queue.includes(g.force.tick).length : 'undefined')
+		}
+		elapsedTime.start(100);
+	});
+
+	var g = {};
+	var OutputDiv = outputs.OutputDiv(g);
+
+	var log = OutputDiv(document.body)
+	log.message = function (value) {
+		return 'alpha: ' + d3.format(".3f")(value)
+				 + '\tgravity: ' + d3.format(".3f")(g.force.gravity())
+				 + '\tcharge: ' + d3.format(".1f")(g.force.charge())
+				 + '\tfriction: ' + d3.format(".3f")(g.force.friction())
+				 + "\t velocity: " + d3.format(".3f")(g.v().dx) + "\t" + d3.format(".3f")(g.v().dy)
+	}
+	var logEvents = OutputDiv(document.body, null, "div");
+	logEvents.message = function (d) {
+		var eType = d3.event.type;
+		//console.log(eType)
+		return eType;
+	}
+
+	function test() {
+		var x_immutable = 0; //the value of x_immutable is a reference to a Number object on the heap with value 0
+
+		x_immutable = window.setTimeout(function () {
+			console.log("timerID_immutable: " + x_immutable);
+		}, 0);
+		//the value of x_immutable is a reference to a Number object on the heap with value of the timer id: 1
+		//the Number object with value 0 has no reference so is garbage collected
+
+		x_immutable = window.setTimeout(function () {
+			console.log("timerID_immutable: " + x_immutable);
+		}, 0);
+		//the value of x_immutable is a reference to a Number object on the heap with value of the timer id: 2
+		//the Number object with value 1 has no reference so is garbage collected
+
+		//result...
+		//timerID_immutable: 2
+		//timerID_immutable: 2
+
+		x_immutable = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Number object on the heap that x_immutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_immutable: " + x);
+			}
+		})(x_immutable), 0);
+		//result...
+		//timerID_immutable: 3
+		//timerID_immutable: 3
+		//timerID_immutable: 2
+
+		var x_mutable = {}; //the value of x_mutable is a reference to an Object object on the heap with value undefined
+		x_mutable.id = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Object object on the heap that x_mutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_mutable: " + x.id);
+			}
+		})(x_mutable), 0);
+		//result...
+		//timerID_immutable: 3
+		//timerID_immutable: 3
+		//timerID_immutable: 2
+		//timerID_mutable: 4
+
+
+	
+		var x_immutable0 = window.setTimeout(function () {
+			console.log("\n///////////////////////////////////////////////////////////////////////////////////////////////")
+			console.log("timerID_immutable: " + x_immutable0);
+		}, 0);
+		x_immutable0 = "a new value"
+		//the value of x_immutable -> new Number(1)
+		//the Number object with value 0 has no reference so is garbage collected
+
+		var x_immutable1 = window.setTimeout((function (x) {
+			return function () {
+				console.log("timerID_immutable: " + x);
+			}
+		})(x_immutable1), 0);
+		//result...
+
+		var x_mutable = {}; //the value of x_mutable is a reference to an Object object on the heap with value undefined
+		x_mutable.id = window.setTimeout((function (x) {
+			//the value of x is a reference to the same Object object on the heap that x_mutable currently points to
+			//  this IIFE is executed before window.setTimeout
+			return function () {
+				console.log("timerID_mutable: " + x.id);
+			}
+		})(x_mutable), 0);
+		x_mutable = {};
+	};
+</script>
+	<script src="elapsedTime/elapsedTime/elapsed time.js"></script>
+</body>
+</html>

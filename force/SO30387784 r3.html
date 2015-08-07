@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+		<title></title>
+	<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+	<style>
+body {
+	/*font-family: 'Open Sans', sans-serif;*/
+	font-family: 'Roboto', sans-serif;
+}
+svg {
+	outline: 1px solid black;
+	background-color: rgba(255, 127, 80, 0.6);
+}
+div {
+	display: inline-block;
+}
+#method,
+#clear {
+	margin-left: 20px;
+	background-color: rgba(255, 127, 80, 0.6);
+	border: none;
+}
+#clear {
+	float: right;
+}
+#inputs {
+	font-size: 16px;
+	display: block;
+	width: 900px;
+}
+.input {
+	display: inline-block;
+	background-color: rgba(255, 127, 80, 0.37);
+	outline: 1px solid black;
+	position: relative;
+	margin: 10px 10px 0 0;
+	padding: 3px 10px;
+}
+.input div {
+	width: 60px;
+}
+.method {
+	display: block;
+}
+.ui-slider,
+span.ui-slider-handle.ui-state-default {
+	width: 3px;
+	background: black;
+	border-radius: 0;
+}
+span.ui-slider-handle.ui-state-default {
+	top: calc(50% - 1em / 2);
+	height: 1em;
+	margin: 0;
+	border: none;
+}
+div.ui-slider-horizontal {
+	width: 200px;
+	margin: auto 10px auto 10px;
+	/*position: absolute;*/
+	/*bottom: 0.1em;*/
+	position: absolute;
+	bottom: calc(50% - 2.5px);
+	/*vertical-align: middle;*/
+	height: 5px;
+	border: none;
+}
+.slider-value {
+	position: absolute;
+	text-align: right;
+}
+input,
+select,
+button {
+	font-family: inherit;
+	font-size: inherit;
+}
+	</style>
+</head>
+<body>
+	<div id="frictionSlider"></div>
+	<script src="jQuery/jquery-1.11.1.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+	<script src="d3/d3 CB.js"></script>
+<script>
+	$(function () {
+		var width = $(window).width(),
+			height = $(window).height();
+		var circles = [
+			{
+				x: width / 2 + 100,
+				y: height / 2,
+				radius: 100
+			},
+			{
+				x: width / 2 - 100,
+				y: height / 2,
+				radius: 100
+			},
+		],
+		nodeFill = "#006E3C";
+
+		var force = d3.layout.force()
+			.gravity(0)
+			.charge(-100)
+			.friction(0.9)
+			.size([width, height])
+			.nodes(circles)
+			.linkDistance(250)
+			.linkStrength(1)
+			.on("tick", tick)
+			.start();
+
+		SliderControl("#frictionSlider", "friction", force.friction, [0, 1], ",.3f");
+
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.style("background-color", "white");
+		var nodes = svg.selectAll(".node");
+		nodes = nodes.data(circles);
+		nodes.exit().remove();
+		var enterNode = nodes.enter().append("g")
+			.attr("class", "node")
+			.call(force.drag);
+		console.log(enterNode);
+		//Add circle to group
+		enterNode.append("circle")
+			.attr("r", function (d) {
+				return d.radius;
+			})
+			.style("fill", "#006E3C")
+			.style("opacity", 0.6);
+
+		; (function (d3, force) {
+			//Drag behaviour///////////////////////////////////////////////////////////////////
+			//  hook drag behavior on force
+
+			//VELOCITY
+			//  maintain velocity state in case a force tick occurs emidiately before dragend
+			//  the tick wipes out the previous position
+			var dragVelocity = (function () {
+				var dx, dy;
+				function f(d) {
+					if (d3.event) {
+						dx = d3.event.dx; dy = d3.event.dy;
+					}
+					return { dx: dx, dy: dy }
+				};
+				f.correct = function (d) {
+					//tick occured and set px/y to x/y, re-establish velocity state
+					d.px = d.x - dx; d.py = d.y - dy;
+				}
+				f.reset = function () { dx = dy = 0 }
+				return f;
+			})()
+
+			//DRAGSTART HOOK
+			var stdDragStart = force.drag().on("dragstart.force");
+
+			force.drag().on("dragstart.force", myDragStart);
+
+			function myDragStart(d) {
+				var that = this, node = d3.select(this);
+
+				nonStickyMouse();
+				dragVelocity.reset();
+				stdDragStart.call(this, d)
+
+				function nonStickyMouse() {
+
+					if (!d.___hooked) {
+						//node is not hooked
+						//hook mouseover/////////////////////////
+						//remove sticky node on mouseover behavior and save listeners
+						d.___mouseover_force = node.on("mouseover.force");
+						node.on("mouseover.force", null);
+
+						d.___mouseout_force = node.on("mouseout.force");
+
+						d.___hooked = true;
+
+						//standard mouseout will clear d.fixed
+						d.___mouseout_force.call(that, d);
+					}
+					//dissable mouseout/////////////////////////
+					node.on("mouseout.force", null);
+				}
+			}
+			//DRAG HOOK
+			var stdDrag = force.drag().on("drag.force");
+
+			force.drag().on("drag.force", myDrag);
+
+			function myDrag(d) {
+				var v, p;
+				//maintain back-up velocity state
+				v = dragVelocity();
+				p = { x: d3.event.x, y: d3.event.y };
+				stdDrag.call(this, d)
+			}
+
+			//DRAGEND HOOK
+			var stdDragEnd = force.drag().on("dragend.force");
+
+			force.drag().on("dragend.force", myDragEnd);
+
+			function myDragEnd(d) {
+				var that = this, node = d3.select(this);
+				//correct the final velocity vector at drag end
+				dragVelocity.correct(d)
+
+				//hook mouseout/////////////////////////
+				//re-establish standard behavior on mouseout
+				node.on("mouseout.force", function mouseout(d) {
+					myForceMouseOut.call(this, d)
+				});
+
+				stdDragEnd.call(that, d);
+
+				function myForceMouseOut(d) {
+					var timerID = window.setTimeout((function () {
+						var that = this, node = d3.select(this);
+						return function unhookMouseover() {
+							//if (node.on("mouseover.force") != d.___mouseout_force) {
+							if (node.datum().___hooked) {
+								//un-hook mouseover and mouseout////////////
+								node.on("mouseout.force", d.___mouseout_force);
+								node.on("mouseover.force", d.___mouseover_force);
+								node.datum().___hooked = false;
+							}
+						}
+					}).call(this), 500);
+					return timerID;
+				}
+			}
+
+		})(d3, force);
+
+		function tick(e) {
+			//contain the nodes...
+			nodes.attr("transform", function (d) {
+				var r = 100;
+				if (d.x - r <= 0 && d.px > d.x) d.px -= (d.px - d.x) * 2;
+				if (d.x + r >= width && d.px < d.x) d.px += (d.x - d.px) * 2;
+				if (d.y - r <= 0 && d.py > d.y) d.py -= (d.py - d.y) * 2;
+				if (d.y + r >= height && d.py < d.y) d.py += (d.y - d.py) * 2;
+				return "translate(" + d.x + "," + d.y + ")";
+			});
+			//indicate status by color
+			nodes.selectAll("circle")
+				.style("fill", function (d, i) {
+					return ((d.___hooked && !d.fixed) ? "red" : nodeFill)
+				})
+			force.start();
+		}
+
+		function SliderControl(selector, title, value, domain, format) {
+			var accessor = d3.functor(value), rangeMax = 1000,
+					_scale = d3.scale.linear().domain(domain).range([0, rangeMax]),
+					_$outputDiv = $("<div />", { class: "slider-value" }),
+					_update = function (value) {
+						_$outputDiv.css("left", 'calc( '
+							+ (_$slider.position().left + _$slider.outerWidth()) + 'px + 1em )')
+						_$outputDiv.text(d3.format(format)(value));
+						$(".input").width(_$outputDiv.position().left + _$outputDiv.outerWidth() - _innerLeft)
+
+					},
+
+					_$slider = $(selector).slider({
+						value: _scale(accessor()),
+						max: rangeMax,
+						slide: function (e, ui) {
+							_update(_scale.invert(ui.value));
+							accessor(_scale.invert(ui.value)).start();
+						}
+					}),
+					_$wrapper = _$slider.wrap("<div class='input'></div>")
+					.before($("<div />").text(title + ":"))
+					.after(_$outputDiv).parent(),
+					_innerLeft = _$wrapper.children().first().position().left;
+
+			_update(_scale.invert($(selector).slider("value")))
+
+		};
+
+	});
+
+
+</script>
+</body>
+</html>

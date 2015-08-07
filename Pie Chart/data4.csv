@@ -1,0 +1,18 @@
+status,dept,city,points
+temp,finance,New York,33
+contract,HR,London,12
+contract,HR,New York,11
+casual,shop,London,43
+temp,sales,New York,14
+contract,shop,Paris,51
+temp,finance,London,7
+contract,office,New York,61
+contract,shop,London,31
+temp,office,New York,16
+contract,office,London,19
+temp,finance,London,7
+contract,office,New York,61
+contract,sales,London,31
+temp,finance,New York,16
+contract,sales,Paris,19
+temp,sales,New York,11

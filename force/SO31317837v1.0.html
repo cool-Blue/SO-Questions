@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+
+    body {
+      font: 10px sans-serif;
+      shape-rendering: crispEdges;
+    }
+    svg {
+      outline: 1px solid red;
+      overflow: visible;
+    }
+    .link.flow {
+      opacity: 1!important;
+      /*stroke-width: 1.5px;*/
+    }
+
+    #licensing {
+      fill: green;
+    }
+
+    .link.flow.licensing {
+      stroke: green;
+    }
+
+    .link.flow.resolved {
+      stroke-dasharray: 0,2 1;
+    }
+
+    circle.flow {
+      fill: #ff2575;
+      stroke: #ff2575;
+      stroke-width: 1.5px;
+    }
+
+    text.flow {
+      font: 10px sans-serif;
+      pointer-events: none;
+      text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+    }
+
+    path.link.flow {
+      fill: none;
+      stroke: blue;
+    }
+    #panel div {
+      white-space: pre;
+      display: inline-block;
+    }
+    input {
+      margin: 10px;
+    }
+  </style>
+
+</head>
+<body>
+<a href=""></a>
+<div id="panel">
+  <input id="update" type="button" value="update">
+</div>
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>-->
+<script src="d3 CB.js"></script>
+
+<script>
+//debug panel///////////////////////////////////////////////////////////////////////////////////////////
+  var update = d3.select("#update")
+    .on("click", (function() {
+      var dataSet = false;
+      return function() {
+        refreshForceFlow(JSON.parse(JSON.stringify(jsonData[(dataSet = !dataSet, +dataSet)])))
+      }
+    })());
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+  var maxWeight = 0;
+  var maxSize = 0;
+
+  //  new graph: start
+  var margin = 10;
+  var width = 500,
+    height = 200;
+
+  var svgMaster = d3.select("body").append("svg") //  initiate svg
+    .attr("id","flow")
+    .attr("width", width)
+    .attr("height", height)
+    .style("margin-right",margin+"px")
+    .style("margin-left",margin+"px")
+    .attr("class", function(d){ return d.class});
+
+  var svg = svgMaster.append('svg:g')
+    .attr('id','groupFlow');
+
+  var link = svg.selectAll(".link"),
+    node = svg.selectAll(".node");  //  nodes and links
+
+  // :end new graph
+
+  var jsonData = [{
+    "nodes": [
+      {"username": "S_Christophorus", "social_net_id": "55641120cdfa6618acdd1952", "last_name":
+        "Christophorus", "first_name": "Stanly", "avatar": "/media/avatars/C02.png", "person_id": "556431f3cdfa661108325774"
+        , "id": "55641120cdfa6618acdd1a8e"},
+      {"username": "A_Field", "social_net_id": "55641120cdfa6618acdd1952"
+        , "last_name": "Field", "first_name": "Abdul", "avatar": "/media/avatars/B01.png", "person_id": "556431f3cdfa6611083257f6"
+        , "id": "55641120cdfa6618acdd1b94"},
+      {"username": "B_Hugh", "social_net_id": "55641120cdfa6618acdd1952"
+        , "last_name": "Hugh", "first_name": "Beale", "avatar": "/media/avatars/B02.png", "person_id": "556431f3cdfa6611083257f7"
+        , "id": "55641120cdfa6618acdd1b96"},
+      {"username": "M_Kennedy", "social_net_id": "55641120cdfa6618acdd1952"
+        , "last_name": "Kennedy", "first_name": "Mordy", "avatar": "/media/avatars/B05.png", "person_id": "556431facdfa661108327e21"
+        , "id": "55641128cdfa6618acdd9fed"}
+    ],
+    "edges": [
+      {"source": "0", "target": "1", "weight": 1.5},
+      {"source": "2", "target": "0", "weight": 46.5},
+      {"source": "0", "target": "2", "weight": 6.0},
+      {"source": "2", "target": "1", "weight": 1.5},
+      {"source": "2", "target": "3", "weight": 3.0}
+    ]
+  },
+  {
+    "nodes": [
+      {"username": "A_Field", "social_net_id": "55641120cdfa6618acdd1952", "last_name":
+        "Christophorus", "first_name": "Stanly", "avatar": "/media/avatars/C02.png", "person_id": "556431f3cdfa661108325774"
+        , "id": "55641120cdfa6618acdd1a8e"},
+      {"username": "B_Hugh", "social_net_id": "55641120cdfa6618acdd1952"
+        , "last_name": "Field", "first_name": "Abdul", "avatar": "/media/avatars/B01.png", "person_id": "556431f3cdfa6611083257f6"
+        , "id": "55641120cdfa6618acdd1b94"},
+      {"username": "M_Kennedy", "social_net_id": "55641120cdfa6618acdd1952"
+        , "last_name": "Hugh", "first_name": "Beale", "avatar": "/media/avatars/B02.png", "person_id": "556431f3cdfa6611083257f7"
+        , "id": "55641120cdfa6618acdd1b96"}
+    ],
+    "edges": [
+      {"source": "0", "target": "1", "weight": 1.5},
+      {"source": "2", "target": "0", "weight": 26.5},
+      {"source": "0", "target": "2", "weight": 16.0},
+      {"source": "2", "target": "1", "weight": 1.5}
+    ]
+  }];
+
+  /*
+   * refresh graph based on given data
+   */
+  var refreshForceFlow = (function(){
+    // Need to use a single instance of force because of
+    // this bug https://github.com/mbostock/d3/issues/2468
+    // hence the closure...
+    var force = d3.layout.force()
+          .size([width, height])
+          .linkDistance(60)
+          .charge(-300)
+
+        return function(json){
+  //    clearGraphFlow();  ***d3 does this for you if you do it right***
+  //    var maxWeight = 0;
+  //***this code is already written for you: you just need to wire it up***
+  //    for(var edgeIndex = 0; edgeIndex < json.edges.length; edgeIndex++){
+  //      if(json.edges[edgeIndex].weight > maxWeight) maxWeight = json.edges[edgeIndex];
+  //    }
+      var maxWeight = d3.max(json.edges, function(d){return d.weight});
+      //clean up the data: force needs type Number on link.source/destination
+      json.edges.forEach(function(d){
+        d.source = +d.source; d.target = +d.target
+      });
+      console.log(json);
+
+      force
+        .nodes(json.nodes)  //***don't need to wrap in d3.value***
+        .links(json.edges)
+        .on("tick", tickFlow)
+        .start();
+
+      // Per-type markers, as they don't inherit styles.
+      // UPDATE
+      var defs = svg.selectAll("defs").data([json.edges]);
+      // EXIT
+      defs.exit().remove();
+      // ENTER
+      defs.enter().append("defs");
+      // UPDATE+ENTER for defs
+          // UPDATE for markers
+      var markers = defs.selectAll("marker")
+          .data(function(d){return d});    //get the data elements from the defs datum
+          //ENTER
+          markers.enter().append("marker")       //new markers only
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 13)    //  15
+            .attr("refY", 0)    //  -1.5
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path");
+          // UPDATE+ENTER
+          markers.attr("id", function(d) { return ("weight_" + d.weight).replace(".","_"); })
+            .select("path")
+              .style("fill", function(d){
+                var color = 'FF';
+                var c = Math.floor((d.weight*99)/maxWeight);
+                c = 100 - c;
+                if( c < 10) c = '0'+c;
+                color = c + color;
+                color = c + color;
+                //console.log('#'+color);
+                return '#'+color;
+              })
+              .style("stroke", function(d){
+                var color = 'FF';
+                var c = Math.floor((d.weight*99)/maxWeight);
+                c = 100 - c;
+                if( c < 10) c = '0'+c;
+                color = c + color;
+                color = c + color;
+                //console.log('#'+color);
+                return '#'+color;
+              })
+              .style("stroke-width", "1px")
+              .attr("d", "M0,-5L10,0L0,5");
+          // EXIT
+          markers.exit().remove();
+
+      var link = svg.selectAll("g.link").data(force.links());
+          link.enter().insert("g", ".link").attr("class", "link")
+            .append("path")
+            .attr("class", "link flow");   //***don't need a function for constant value***;
+          link.exit().remove();
+          path = link.select("path")
+          .style("stroke-width", function(d) {
+                var res = 1 + ((d.weight * 2.5) / maxWeight);
+                return Math.round(res) + 'px';
+              })
+          .style("stroke", function(d){
+            var color = 'FF';
+            var c = Math.floor((d.weight*99)/maxWeight);
+            c = 100 - c;
+            if( c < 10) c = '0'+c;
+            color = c + color;
+            color = c + color;
+            //console.log('#'+color);
+            return '#'+color;
+          })
+          .attr("marker-end", function(d) { return "url(#" + ("weight_"+d.weight).replace(".","_") + ")"; });
+
+      var node = svg.selectAll("g.node")
+            .data(force.nodes()),     //node is the node container: includes circle and text
+          nodeEnter = node.enter().append("g").call(force.drag),
+          //append the circle and the text inside the node g
+          //ENTER
+          circle = nodeEnter.attr("class", "node")
+            .append("circle")
+              .attr("r", 6)
+              .attr("class", "flow"),
+          //  .on("contextmenu", d3.contextMenu(menu)),
+
+          text = nodeEnter.append("text")
+            .attr("class", "flow")
+            .attr("x", 8)
+            .attr("y", ".31em")
+            .style({"pointer-events": "all", cursor: "default"})    //***include dragging by text***
+
+          //ENTER+UPDATE
+          text.text(function(d) { return d.username; });
+
+          // EXIT
+          node.exit().remove();
+
+      // Use elliptical arc path segments to doubly-encode directionality.
+      function tickFlow(e) {
+        path.attr("d", linkArc);
+        node.attr("transform", transform);  //circle and text is wrapped by node
+      }
+
+      function linkArc(d) {
+        var tx = d.target.x - 0;
+        var ty = d.target.y - 0;
+        var sx = d.source.x - 0;
+        var sy = d.source.y - 0;
+
+        var dx = tx - sx,
+            dy = ty - sy,
+            dr = Math.sqrt(dx * dx + dy * dy);
+        return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+      }
+
+      function transform(d) {
+        return "translate(" + d.x + "," + d.y + ")";
+      }
+    };  //  end of function
+  })();
+
+  /*
+   * clear gragh
+   */
+//  var clearGraphFlow = function(){  // ***Not required***
+//    svg.selectAll("g").remove();
+//    svg.selectAll("defs").remove();
+//  };
+
+  refreshForceFlow(JSON.parse(JSON.stringify(jsonData[0])));
+
+</script></body>
+</html>

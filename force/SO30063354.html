@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    .domain {
+      fill: none;
+      stroke: #000;
+      stroke-opacity: .3;
+      stroke-width: 10px;
+      stroke-linecap: round;
+    }
+
+    .halo {
+      fill: none;
+      stroke: #ddd;
+      stroke-width: 8px;
+      stroke-linecap: round;
+    }
+
+    .tick {
+      font-size: 10px;
+    }
+
+    .selecting circle {
+      fill-opacity: .2;
+    }
+
+      .selecting circle.selected {
+        stroke: #f00;
+      }
+
+    .handle {
+      fill: #fff;
+      stroke: #000;
+      stroke-opacity: .5;
+      stroke-width: 1.25px;
+      cursor: crosshair;
+    }
+  </style>
+</head>
+<body>
+  <p id="nodeCount"></p>
+  <script src="jQuery/jquery-1.11.1.min.js"></script>
+  <script src="d3 CB.js"></script>
+  <script>
+    var width = 700,
+    height = 600,
+    padding = 20;
+
+    var start = new Date(2013, 0, 1),
+      end = new Date(2013, 11, 31)
+
+    var data = []
+
+    for (i = 0; i < 100; i++) {
+      var point = {}
+
+      var year = 2013;
+      var month = Math.floor(Math.random() * 12)
+      var day = Math.floor(Math.random() * 28)
+
+      point.date = new Date(year, month, day)
+      point.mIndex = i
+      data.push(point)
+    }
+
+    var force = d3.layout.force()
+          //.nodes(data)
+          .size([width - padding, height - 100])
+          .on("tick", tick)
+          .start()
+
+    var svg = d3.select("body").append("svg")
+      .attr({
+        "width": width,
+        "height": height
+      })
+
+    //build stuff
+    var x = d3.time.scale()
+      .domain([start, end])
+      .range([padding, width - 6 * padding])
+      .clamp(true)
+
+    var xAxis = d3.svg.axis()
+      .scale(x)
+      .tickSize(0)
+      .tickPadding(20)
+    //.tickFormat(d3.time.format("%x"))
+
+    var brush = d3.svg.brush()
+      .x(x)
+      .extent([start, end])
+      .on("brush", brushed1)
+
+    //append stuff
+    var slidercontainer = svg.append("g")
+      .attr("transform", "translate(100, 500)")
+
+    var axis = slidercontainer.append("g")
+      .call(xAxis)
+
+    var slider = slidercontainer.append("g")
+      .call(brush)
+      .classed("slider", true)
+
+    //manipulate stuff
+    d3.selectAll(".resize").append("circle")
+      .attr("cx", 0)
+      .attr("cy", 0)
+      .attr("r", 10)
+      .attr("fill", "Red")
+      .classed("handle", true)
+
+    d3.select(".domain")
+      .select(function () { return this.parentNode.appendChild(this.cloneNode(true)) })
+      .classed("halo", true)
+
+    function brushed1(e) {
+
+      var nodes = includedNodes(data, brush);
+
+      force
+        .nodes(includedData(data, brush))
+        .start()
+
+        nodes.enter().append("circle")
+            .attr("r", 10)
+            .attr("fill", "red")
+            .call(force.drag)
+            .attr("class", "node")
+            .attr("cx", function (d) { return d.x })
+            .attr("cy", function (d) { return d.y })
+
+      nodes
+        .exit()
+        .remove()
+
+    }
+
+    function includedData(data, brush) {
+      var a = data.filter(function (d, i, a) {
+        return d.date >= brush.extent()[0] && d.date <= brush.extent()[1]
+      })
+      return a
+
+    }
+    function includedNodes(data, brush) {
+      return svg.selectAll(".node")
+              .data(includedData(data, brush), function (d, i) {
+                return d.mIndex
+              })
+    }
+
+    function tick() {
+
+      includedNodes(data, brush)
+        .attr("cx", function (d) { return d.x })
+        .attr("cy", function (d) { return d.y })
+
+    }
+    brushed1()
+  </script>
+</body>
+</html>

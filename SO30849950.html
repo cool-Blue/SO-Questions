@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    body {
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+<div id="container"></div>
+<script src="d3 CB.js"></script>
+<script>
+  var data = [
+    [1,2,3],
+    [1,2,3],
+    [1,2,3]
+  ];
+
+  render(data);
+  render(data);
+  render(data);
+
+  function render(data) {
+    var container = d3.select('#container');
+    var table = container.selectAll('table')
+        .data([data]);
+    table.enter().append("table").classed("legend", true)
+    table.exit().remove();
+    // create the row selection
+    var tr = table.selectAll('tr')
+            .data(function(d) {return d});
+    tr.exit().remove();
+    // append 'tr' on enter
+    tr.enter()
+            .append('tr');
+
+    // create the cell selection
+    var td = tr.selectAll('td')
+            .data(function(d) { return d; });
+    td.exit().remove();
+    // append on enter
+    td.enter()
+            .append('td');
+
+    // update cell text on update
+    td.text(function(d) {
+      return d3.format(" >8,.3f")(d);
+    });
+
+  }
+  setInterval(function() {
+    for (var i = 0; i < 3; i++) {
+      for(var j = 0; j < 3; j++) {
+        data[i][j] = data[i][j] + Math.random();
+      }
+    }
+    render(data);
+  }, 500);
+</script>
+</body>
+</html>

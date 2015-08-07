@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title></title>
+  <style>
+    svg {
+      outline: 1px solid red;
+    }
+    .node circle {
+      cursor: pointer;
+      stroke: #3182bd;
+      stroke-width: 1.5px;
+    }
+
+    .node text {
+      font: 10px sans-serif;
+      pointer-events: none;
+      text-anchor: middle;
+    }
+
+    line.link {
+      fill: none;
+      stroke: #9ecae1;
+      stroke-width: 1.5px;
+    }
+  </style>
+</head>
+<body>
+  <select id="startMode">
+    <option value="true" selected="selected">emerge</option>
+    <option value="false" >normal</option>
+  </select>
+  <div id="viz"></div>
+  <script src="jquery-1.11.1.min.js"></script>
+  <script src="d3 CB.js"></script>
+  <script src="startCollapsed.js"></script>
+</body>
+</html>

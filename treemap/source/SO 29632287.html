@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>multi focus force</title>
+	<style>
+			.node {
+				stroke-width: 1.5px;
+			}
+			.node:hover circle {
+				/*fill: grey !important;*/
+			}
+
+			text {
+				font: 18px 'Open Sans', sans-serif;;
+				text-anchor: middle;
+				pointer-events: none;
+				fill: white;
+			}
+		circle {
+			fill: #ccc;
+			stroke: white;
+			stroke-width: 2px;
+			background-image:linear-gradient(-45deg, rgb(0, 0, 0, 0.3) 0, transparent 100%); 
+		}
+}  </style>
+</head>
+<body>
+	<script src="../../../../../d3/d3 CB.js"></script>
+<script>
+	d3.selection.prototype.moveToFront = function () {
+		var event = d3.event, type = event && event.type,
+				l = event.currentTarget['__on' + type], c = l.$
+
+		this.each(function () {
+			var n = this
+
+			n.removeEventListener(type, l, c)
+			//console.log('>>removed<<' + '\t' + type + '\t' + n.__data__)
+
+			n = n.parentNode.appendChild(n)
+
+			window.setTimeout(function () {
+				//console.log('<<added>>' + '\t' + type + '\t' + n.__data__)
+				n.addEventListener(type, l, c)
+			}, 10)
+		});
+
+		return this
+
+	};
+	var data = [
+		{ "id": 0, "name": "AngularJS", "r": 50 },
+		{ "id": 0, "name": "HTML5", "r": 40 },
+		{ "id": 0, "name": "Javascript", "r": 30 },
+		{ "id": 0, "name": "NodeJs", "r": 30 },
+		{ "id": 0, "name": "D3.js", "r": 40 },
+		{ "id": 0, "name": "CreateJS", "r": 45 },
+		{ "id": 0, "name": "Cordova", "r": 40 },
+		{ "id": 0, "name": "CSS", "r": 40 },
+		{ "id": 0, "name": "SVG", "r": 20 },
+		{ "id": 0, "name": "PHP", "r": 20 },
+		{ "id": 0, "name": "jQuery", "r": 30 },
+		{ "id": 1, "name": "Actionscript", "r": 50 },
+		{ "id": 1, "name": "Flash", "r": 32 },
+		{ "id": 1, "name": "Flex", "r": 50 },
+		{ "id": 1, "name": "AIR", "r": 40 },
+		{ "id": 1, "name": "Photoshop", "r": 30 },
+		{ "id": 1, "name": "Illustrator", "r": 30 },
+		{ "id": 2, "name": "Node Webkit", "r": 40 },
+		{ "id": 2, "name": "Chrome App", "r": 30 },
+		{ "id": 2, "name": "Cordova", "r": 45 },
+	];
+
+	var width = window.innerWidth,
+		height = 450;
+
+	var fill = d3.scale.category10();
+
+	var nodes = [], labels = [],
+		foci = [{ x: 0, y: 150 }, { x: 350, y: 150 }, { x: 200, y: 150 }];
+
+	for (i = 0; i < data.length; i++) {
+		var item = data[i];
+		nodes.push({ id: item.id, r: item.r, name: item.name });
+	}
+
+	var svg = d3.select("body").append("svg")
+		.attr("width", "100%")
+		.attr("height", height)
+
+	var force = d3.layout.force()
+		.nodes(nodes)
+		.links([])
+		.charge(-400)
+		.gravity(0.1)
+		.friction(0.8)
+		.size([width, height])
+		.on("tick", tick)
+		.start();
+
+
+	var node = svg.selectAll("g")
+			.data(nodes)
+			.enter()
+			.append("g")
+			.attr("class", "node")
+			.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+			.style('cursor', 'pointer')
+			.on('mousedown', function() {
+				var sel = d3.select(this);
+				sel.moveToFront();
+			})
+			.on('mouseover', (function () {
+				var prevNode, interlock = '__onmouseout', me = '__onmouseover';
+				return function (d) {
+					if (prevNode && !(prevNode === this)
+							&& prevNode[me].___active___) {
+						console.log('***collision***\tmouseover\t' + d)
+						prevNode[interlock] && prevNode[interlock]()
+					}
+
+					prevNode = this
+					prevNode[me].___active___ = true
+
+					var sel = d3.select(this);
+					sel.moveToFront().select('circle')
+						.transition().duration(500)
+						.style('fill', 'grey')
+						.each('start', function (d) {
+							console.log('transition ' + d.name)
+						});
+				};
+			})())
+			.on('mouseout', function () {
+				var interlock = '__onmouseover';
+				if (this[interlock]) {
+					this[interlock].___active___ = false
+				}
+				var sel = d3.select(this);
+				sel.select('circle')
+					.transition().duration(500)
+					.style('fill', function (d) { return fill(d.id); });
+			})
+			.call(force.drag);
+
+	node.append("circle")
+		.attr("r", function (d) { return d.r; })
+		.style("fill", function (d) { return fill(d.id); })
+		.style('background-image', 'linear-gradient(-45deg, rgb(0, 0, 0, 0.3) 0, transparent 100%);')
+
+	node.append("text")
+		.text(function(d) {
+			return d.name;
+		})
+		.style("font-size", function(d) {
+			return Math.min(2 * d.r, (2 * d.r - 8) / this.getComputedTextLength() * 16) + "px";
+		})
+		.attr("dy", ".35em");
+
+	var log = d3.select('body').append('div').attr('id', 'log');
+
+	function tick(e) {
+		//var k = .1 * e.alpha;
+		var k = .1 * e.alpha;
+		log.text('alpha: ' + d3.format(".3f")(e.alpha))
+		console.log(log.text())
+		// Push nodes toward their designated focus.
+		nodes.forEach(function (o, i) {
+			o.y += (foci[o.id].y - o.y) * k;
+			o.x += (foci[o.id].x - o.x) * k;
+		});
+
+		node.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+	}	</script>
+</body>
+</html>

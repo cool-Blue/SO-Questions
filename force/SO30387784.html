@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+		<title></title>
+	<style>
+		div {
+			display: inline-block;
+		}
+
+	</style>
+</head>
+<body>
+	<script src="jquery-1.11.1.min.js"></script>
+	<script src="d3 CB.js"></script>
+<script>
+	$(function () {
+		var width = $(window).width(),
+			height = $(window).height();
+		var nodes = [
+			{
+				x: width / 2 + 100,
+				y: height / 2,
+				radius: 100
+			},
+			//{
+			//  x: width / 2 - 100,
+			//  y: height / 2,
+			//  radius: 100
+			//},
+			//{
+			//  x: width / 2,
+			//  y: height / 2 + 100,
+			//  radius: 100
+			//}
+		];
+		var force = d3.layout.force()
+			.gravity(0)
+			.charge(-100)
+			.friction(0.9)
+			.size([width, height])
+			.nodes(nodes)
+			.linkDistance(250)
+			.linkStrength(1)
+			.on("tick", tick)
+			.start();
+		var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.style("background-color", "white");
+		var node = svg.selectAll(".node");
+		node = node.data(nodes);
+		node.exit().remove();
+		var enterNode = node.enter().append("g")
+			.attr("class", "node")
+			.call(force.drag);
+		console.log(enterNode);
+		//Add circle to group
+		enterNode.append("circle")
+			.attr("r", function (d) {
+				return d.radius;
+			})
+			.style("fill", "#006E3C")
+			.style("opacity", 0.6);
+
+		var mouseover_force, mouseout_force,
+				stdDragStart = force.drag().on("dragstart.force");
+		force.drag().on("dragstart.force", myDragStart);
+		function myDragStart(d) {
+			var node = d3.select(this)
+			mouseover_force = node.on("mouseover.force");
+			node.on("mouseover.force", null);
+
+			mouseout_force = node.on("mouseout.force");
+			node.on("mouseout.force", myForceMouseOut);
+
+			stdDragStart.call(this, d)
+			console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^dragstart^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+		}
+
+		var stdDrag = force.drag().on("drag.force");
+		force.drag().on("drag.force", myDrag);
+		function myDrag(d) {
+			var x = d.x, y = d.y;
+			//stop dead
+			//d.px = d.x; d.py = d.y;
+
+			//inertia
+			d.x = d.px; d.px = x;
+			d.y = d.py; d.py = y;
+
+			stdDrag.call(this, d)
+			var f = d3.format(",.3f");
+			console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^dragING^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+			console.log("\tdx: " + f(d.px - d.x) + "\tdy: " + f(d.py - d.y) + "\t" + (d.fixed ? "fixed" : "NOT fixed") + "\n\t"
+				+ "\tpx\t" + f(d.px) + "\t-> x\t" + f(d.x)
+				+ "\n\t\tpy\t" + f(d.py) + "\t-> y\t" + f(d.y))
+			console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n")
+		}
+
+
+		var stdDragEnd = force.drag().on("dragend.force");
+		force.drag().on("dragend.force", myDragEnd);
+		function myDragEnd(d) {
+			var x = d.x, y = d.y;
+			//stop dead
+			//d.px = d.x; d.py = d.y;
+
+			//inertia
+			d.x = d.px; d.px = x;
+			d.y = d.py; d.py = y;
+
+			stdDragEnd.call(this, d)
+			console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^dragend^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+		}
+		function myForceMouseOut(d) {
+			var node = d3.select(this);
+			window.setTimeout(function () { node.call(force.drag()) }, 1000);
+		}
+
+		function tick(e) {
+			log.update(e.alpha);
+			node.attr("transform", function (d) {
+				return "translate(" + Math.max(100, Math.min(width - 100, d.x)) + ","
+														+ Math.max(100, Math.min(height - 100, d.y)) + ")";
+			});
+		}
+		g.force = force;
+	});
+	var g = {};
+	function OutputDiv(on, style, before) {
+		function _OutputDiv(on, style, before) {
+			var _sel = d3.select(on), id = ~~(Math.random() * 1000),
+					defStyle = {
+						margin: '10px 10px 10px 0',
+						padding: '3px 3px 3px 3px',
+						display: 'inline-block',
+						'background-color': '#ccc'
+					};
+			if (before) {
+				_sel = _sel.insert('div', before)
+			} else {
+				_sel = _sel.append('div')
+			}
+			_sel = _sel.style(style ? style : defStyle)
+				.attr("id", "ouputDiv_" + id)
+				.attr("class", "ouputDiv")
+			this.selection = _sel
+		}
+		_OutputDiv.prototype.update = function (value) {
+			this.selection.text(this.message(value))
+			return this
+		}
+		_OutputDiv.prototype.message = function (value) {
+			return value
+		}
+		return new _OutputDiv(on, style, before)
+	}
+
+	var log = OutputDiv(document.body)
+	log.message = function (value) {
+		return 'alpha: ' + d3.format(".3f")(value)
+				 + '\tgravity: ' + d3.format(".3f")(g.force.gravity())
+				 + '\tcharge: ' + d3.format(".1f")(g.force.charge())
+				 + '\tfriction: ' + d3.format(".3f")(g.force.friction())
+				 + "\t nodes: " + g.force.nodes().length
+	}
+
+	var elapsedTime = OutputDiv(document.body)
+	elapsedTime.start = function (aveWindow) {
+		this.startTime = window.performance.now()
+		this.lapTime = this.startTime
+		this.ticks = 0
+		this.update(0)
+		this.aveLap = this.AveLap(aveWindow)
+		this.running = true
+		return this
+	}
+	elapsedTime.lap = function () {
+		if (this.running) {
+			this.lastLap = (window.performance.now() - this.lapTime) / 1000
+			this.lapTime = window.performance.now()
+		}
+		return this
+	}
+	elapsedTime.AveLap = function (aveWindow) {
+		var _i = 0, _aveP = 0, _history = [];
+		this.AveLap.window = aveWindow = aveWindow || this.AveLap.window
+		return function (this_lap) {
+			this_lap = this_lap || this.lap().lastLap
+			if (!this.AveLap.window) return _aveP = _i++ ? (_aveP + this_lap / (_i - 1)) * (_i - 1) / _i++ : this.lap().lastLap
+			_history.push(this_lap)
+			for (; _history.length > this.AveLap.window;) {
+				_history.shift()
+			}
+			return _history.reduce(function (ave, t, i, h) {
+				return ave + t / h.length
+			}, 0)
+		}
+	}
+	elapsedTime.AveLap.window = null
+	elapsedTime.t = function () {
+		return d3.format(",.3f")((window.performance.now() - this.startTime) / 1000)
+	}
+	elapsedTime.mark = function (f) {
+		if (this.running) {
+			var _tMark = (window.performance.now() - this.startTime);
+			if (!f) {
+				this.ticks += 1
+				this.update(_tMark / 1000)
+			} else if (f.call) {
+				f.call(this, _tMark)
+			}
+		} else {
+			_tMark = 0
+			//this.start()
+		}
+		return this
+	}
+	elapsedTime.message = function (value) {
+		return 'time elapsed : ' + d3.format(",.3f")(value)
+				+ ' sec\t' + d3.format(",d")(this.ticks)
+	}
+	elapsedTime.stop = function (value) {
+		this.running = false
+		return this
+	}
+	elapsedTime.timestamp = function (message) {
+		if (this.consoleOn) {
+			this.mark(function (t) {
+				console.log(d3.format(",.6f")(t / 1000) + (message ? "\t" + message : ""))
+			})
+		}
+	}
+	elapsedTime.consoleOn = false;
+
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<title>DAG testing: labeled edges</title>
+<script src="../../../../jQuery/jquery-1.11.1.min.js"></script>
+<script src="d3/d3 CB.js"></script>
+<script src="../../../../d3/d3 CB.js"></script>
+<!--<script type="text/javascript" src="d3.min.js"></script>-->
+<script type="text/javascript" src="dijkstra.js"></script>
+
+
+<style type="text/css">
+    #docs {
+        position: fixed;
+        width: 250px;
+        height: 100%;
+        font-size: 80%;
+    }
+    
+    #control {
+        position: fixed;
+        top: 130px; 
+        width: 250px;
+        height: 80%;
+        font-size: 80%;
+        padding: 12px 0px 0px 6px;
+        overflow-y: scroll;
+        border: 1px solid blue;
+    }
+    
+    #viz {
+        position: relative;
+        top: 0px;
+        left: 0px;
+        border: 1px solid red;
+    }
+    
+    .link {
+      stroke: #999;
+      stroke-opacity: .6;
+    }
+    
+    path.link {
+      fill: none;
+      stroke: #666;
+      stroke-width: 1.5px;
+    }
+
+    marker#refers_to {
+      fill: green;
+    }
+
+    path.link.refers_to {
+      stroke: green;
+    }
+
+    path.link.is_grantor_in, path.link.is_recipient_in{
+      /* stroke-dasharray: 0,2 1; */
+      stroke: #f00;
+    }
+
+    circle {
+      stroke: #333;
+    }
+
+    circle.fixed {
+        fill: #C3E2D5;
+    }
+
+    text {
+      font: 10px sans-serif;
+      pointer-events: none;
+    }
+
+    text.shadow {
+      stroke: #fff;
+      stroke-width: 3px;
+      stroke-opacity: .8;
+    }
+    
+    [id^="dbox"] {
+        height: 100px;
+        width: 216px;
+        resize: both;
+        overflow-y: scroll;
+        background-color: #C3E2D5;
+        opacity: .85;
+        position: absolute;
+        border: 1px solid #206050;
+        line-height: 60%;
+    }
+    
+    .plist {font-family: verdana, sans-serif;
+        font-size: 60%;
+    }
+    
+    .plist td:first-child {
+        border-top: solid 1px #206050;
+        border-right: solid 6px #206050;
+        text-align: center;
+        padding: 3px}
+
+</style>
+</head>
+    <body>
+    
+    <div id="viz">
+        <div id="docs">
+            <ul style="padding-left: 16px">
+            <li><button onclick="addedge();">add an edge</button></li>
+            <li>click a node to fix it in space. Makes it sticky: drag it anywhere</li>
+            <li>right-click (command-click) a fixed node to display associated data (data will stay with the node if you drag it)</li>
+            <li>double-click the node to unstick it and hide the data box</li>
+            </ul>
+        </div>
+        <div id="control">
+        "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Quisque sollicitudin. Fusce varius pellentesque ligula. Proin condimentum purus a nunc tempor pellentesque. Proin ac pede in leo tincidunt varius. Ut sed nibh. Praesent adipiscing, sapien sit amet sagittis convallis, dolor neque venenatis diam, at feugiat lacus quam vel pede. Mauris vel enim. Nunc nunc nibh, bibendum ornare, mattis ac, elementum at, mi. Mauris orci massa, vehicula ut, elementum nec, bibendum pretium, elit.""Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Quisque sollicitudin. Fusce varius pellentesque ligula. Proin condimentum purus a nunc tempor pellentesque. Proin ac pede in leo tincidunt varius. Ut sed nibh. Praesent adipiscing, sapien sit amet sagittis convallis, dolor neque venenatis diam, at feugiat lacus quam vel pede. Mauris vel enim. Nunc nunc nibh, bibendum ornare, mattis ac, elementum at, mi. Mauris orci massa, vehicula ut, elementum nec, bibendum pretium, elit."
+        </div>
+    </div>
+    <script type="text/javascript" src="d3noodling.js"></script>
+    </body>
+</html>
