@@ -2,6 +2,110 @@ var orientdb = (function () {
     var allJSON,
         loadedSingles = d3.map();
 
+    var treeData = (function(){
+        var allJSON = [],
+            loadedSingles = d3.map(), fetchedSingle;
+        var currentJSON = [], currentLinks = d3.map(), currentNodes = {};
+
+        function generateNodes() {
+            currentLinks = d3.map();
+            // connect links to existing nodes or generate new nodes based on links source and target
+            currentJSON.forEach(function(link) {
+                // new links will have strings for source and target, skip others
+                // A filtered version of currentNodes is passed to the force,
+                // so the original node data is retained in it's entirety
+                if(typeof(link.source) == "string") {
+                    link.source = currentNodes[link.source] || (
+                        currentNodes[link.source] = {
+                            name        : link.sourceName,
+                            significance: link.sourceSign,
+                            uniquename  : link.sourceUName,
+                            ID          : link.source,
+                            class       : link.sourceClass,
+                            relation    : link.relation,
+                            race        : link.sourceRace,
+                            linkCount   : 0
+                        }
+                      );
+                    link.source.linkCount++;
+                }
+                if(typeof(link.target) == "string") {
+                    link.target = currentNodes[link.target] || (
+                        currentNodes[link.target] = {
+                            name        : link.targetName,
+                            significance: link.targetSign,
+                            uniquename  : link.targetUName,
+                            ID          : link.target,
+                            class       : link.targetClass,
+                            relation    : link.relation,
+                            race        : link.targetRace,
+                            linkCount   : 0
+                        }
+                      );
+                    link.target.linkCount++;
+                }
+                currentLinks.set(linkKey(link), link)
+            });
+        }
+
+        function linkKey(link) {return link.source.ID || link.source + link.target.ID || link.target}
+
+        return {
+            JSON: function(j){
+                if(j) {
+                    currentJSON = clone(j);
+                    generateNodes();
+                    return this
+                } else return currentJSON;
+            },
+            loadedSingle: function(key, value){
+                if(arguments.length == 2) return(loadedSingles.set(key, (fetchedSingle = value)), this);
+                else return (fetchedSingle = loadedSingles.get(key))
+            },
+            mergeSingle: function(key){
+                if(key) this.loadedSingle(key);
+                (currentJSON || []).concat(fetchedSingle.filter(function(l){
+                    return !currentLinks.has(linkKey(l))
+                }));
+                generateNodes();
+                return this
+            },
+            deleteNode: function(clickedNode){
+                // remove links from or to clicked node
+                for (var i = 0; i < currentJSON.length; i++) {
+                    if (currentJSON[i].source.ID == clickedNode.ID) {
+                        currentJSON[i] = {};
+                    } else if (currentJSON[i].target.ID == clickedNode.ID) {
+                        currentJSON[i] = {};
+                    }
+                }
+                currentJSON = currentJSON.filter(function(d){return d});
+                delete currentNodes[clickedNode.ID];
+                generateNodes();
+                return this;
+            },
+            set currentLinks(a){},
+            get currentLinks(){},
+            set currentNodes(a){},
+            get currentNodes(){},
+            setAll: function(){
+                allJSON = clone(currentJSON);
+                return this
+            },
+            getAll: function(ifHave) {
+                return allJSON.length ? (ifHave(clone(allJSON)), true) : false;
+            },
+            dataSet: function(callBack){
+                callBack( {
+                    nodes: d3.values(currentNodes).filter(function (d) {
+                        return d.linkCount;
+                    }),
+                    links: currentJSON  //TODO clone? currently not to help generateNodes
+                })
+            }
+        }
+    })();
+
     return {
         getFamilytreeAll           : function() {
             $.ajax({
@@ -48,23 +152,21 @@ var orientdb = (function () {
             });
         },
         getFamilytreeSingle2       : function(rid, onSuccess) {
-            var infos = rid.split('|'), rels
-            if(!treeData.loadedSingles(infos[0]))
-            if(rels = treeData.loadedSingles(infos[0])) return onSuccess(rels);
+            var infos = rid.split('|');
+            if(treeData.loadedSingle(infos[0])) treeData.mergeSingle().dataSet(onSuccess);
+            if(rels = treeData.loadedSingle(infos[0])) return onSuccess(rels);
             $.ajax({
                 url    : urlOrientDB + "getFamilytreeSingle/" + infos[0].substring(1, infos[0].length),
                 headers: {
                     "Authorization": "Basic " + btoa("arda" + ":" + "arda")
                 },
                 success: function(result){
-                    var relations = result.result;
-                    loadedSingles.set(infos[0], clone(relations));
-                    onSuccess(relations);
+                    treeData.loadedSingle(infos[0], result.result);
+                    treeData.mergeSingle().dataSet(onSuccess);
                 }
             });
         },
-
-    getInfo4CreatureGenRID     : function(rid) {
+        getInfo4CreatureGenRID     : function(rid) {
             var infos = rid.split('|');
             if(infos[1] == "Creature") {
                 this.getInfo4CreatureByRID(infos[0]);
@@ -94,6 +196,9 @@ var orientdb = (function () {
                     orientdb.showInfo4Creature(result);
                 }
             });
+        },
+        deleteCreatureByRID: function(id, onSuccess){
+            treeData.deleteNode(id).dataSet(onSuccess)
         },
         showInfo4Creature          : function(result) {
             if($('#infoinner').css("width") == "0px") {
@@ -347,87 +452,6 @@ var orientdb = (function () {
             });
         }
     };
-    var treeData = (function(){
-        var allJSON,
-            loadedSingles = d3.map(), fetchedSingle;
-        var currentJSON,
-            currentNodes;
-
-        function generateNodes() {
-            // connect links to existing nodes or generate new nodes based on links source and target
-            currentJSON.forEach(function (link) {
-                // new links will have strings for source and target, skip others
-                // A filtered version of currentNodes is passed to the force,
-                // so the original node data is retained in it's entirety
-                if (typeof(link.source) == "string") {
-                    link.source = currentNodes[link.source] || (
-                        currentNodes[link.source] = {
-                            name: link.sourceName,
-                            significance: link.sourceSign,
-                            uniquename: link.sourceUName,
-                            ID: link.source,
-                            class: link.sourceClass,
-                            relation: link.relation,
-                            race: link.sourceRace,
-                            linkCount: 0
-                        }
-                      );
-                    link.source.linkCount++;
-                }
-                if (typeof(link.target) == "string") {
-                    link.target = currentNodes[link.target] || (
-                        currentNodes[link.target] = {
-                            name: link.targetName,
-                            significance: link.targetSign,
-                            uniquename: link.targetUName,
-                            ID: link.target,
-                            class: link.targetClass,
-                            relation: link.relation,
-                            race: link.targetRace,
-                            linkCount: 0}
-                      );
-                    link.target.linkCount++;
-                }
-            });
-        }
-
-        return {
-            JSON: function(j){
-                if(j) {
-                    currentJSON = clone(j);
-                    generateNodes();
-                    return this
-                } else return currentJSON;
-            },
-            set loadedSingles(a){},
-            loadedSingles: function(key, value){
-                if(arguments.length == 2) return(loadedSingles.set(key, value), this);
-                else {
-
-                    return fetchedSingle = loadedSingles.get(id);
-                }
-            },
-            set currentLinks(a){},
-            get currentLinks(){},
-            set currentNodes(a){},
-            get currentNodes(){},
-            setAll: function(){
-                allJSON = clone(currentJSON);
-                return this
-            },
-            getAll: function(ifHave) {
-                return allJSON ? (ifHave(clone(allJSON)), true) : false;
-            },
-            dataSet: function(callBack){
-                callBack( {
-                    nodes: d3.values(currentNodes).filter(function (d) {
-                        return d.linkCount;
-                    }),
-                    links: currentJSON  //TODO clone? currently not to help generateNodes
-                })
-            }
-        }
-    })()
     function clone (o) {
         return o ? JSON.parse(JSON.stringify(o)) : null;
     }

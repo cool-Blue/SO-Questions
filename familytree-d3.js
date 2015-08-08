@@ -58,10 +58,8 @@ var familytree = (function () {
 			},
 			updateGraphByRemoveElement: function (clickedNode, index) {
 					// remove links from or to clicked node
-				var relationships = {ID: clickedNode, rels: []};
 				for (var i = 0; i < currentJSON.length; i++) {
 						if (currentJSON[i].source.ID == clickedNode.ID) {
-							relationships.rels.push(currentJSON[i]);
 								currentJSON[i] = {};
 						} else if (currentJSON[i].target.ID == clickedNode.ID) {
 								currentJSON[i] = {};
@@ -70,7 +68,6 @@ var familytree = (function () {
 				familytree.deleteEmptyObjectsInJSON(currentJSON);
 				familytree.deleteNode(force.nodes(), clickedNode);
 				familytree.updateForce(familytree.generateObjects(currentJSON));
-				events.node_deleted(relationships);	// in case anybody can use this ;)
 			},
 			deleteNode: function (allNodes, clickedNode) {
 					allNodes.forEach(function (node) {
@@ -138,10 +135,10 @@ var familytree = (function () {
 					.linkStrength(1)
 					.distance(100)
 					.on("tick", tick)
-				return function (links, nodes) {
+				return function (dataSet) {
 					force
-						.nodes(nodes)
-						.links(links)
+						.nodes(dataSet.nodes)
+						.links(dataSet.links)
 					svg = zoomableSVG({width: "100%", height: "100%"}, "#familytreecontentsvg", {extent: [0.4, 4], dblclk: null});
 
 					svg.onZoom(zoomed);
@@ -168,7 +165,7 @@ var familytree = (function () {
 						.selectAll("marker")
 						.data(id)
 						.enter();
-					this.createMarker(varsvgMarker);
+					familytree.createMarker(varsvgMarker);
 
 					container = svg.selectAll("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
 					container.enter().append("g").attr("id", "container");
@@ -210,7 +207,9 @@ var familytree = (function () {
 							}
 						});
 
-					var nodes = container.selectAll(".nodes").data(function(d){return d.activeNodes});
+					var nodes = container.selectAll(".nodes").data(function(d){
+						return d.activeNodes
+					});
 					nodes.enter().append("g").attr("class", "nodes");
 
 					node = nodes.selectAll(".node").data(id, nodeKey);
@@ -226,7 +225,7 @@ var familytree = (function () {
 						})
 						.on('contextmenu', function (data, index) {
 							d3.event.preventDefault();
-							familytree.updateGraphByRemoveElement(data, index);
+							familytree.events.node_contextmenu(data, index);
 						})
 						.call(force.drag);
 					newNode
@@ -438,7 +437,7 @@ var familytree = (function () {
 				events.node_click(d);
 			},
 			dblclick: function (d) {
-					events.node_dblclick(d);
+				events.node_dblclick(d);
 			}
 	};
 	function activeNodes(){

@@ -37,17 +37,21 @@ var familytreeController = (function() {
 
     $("ul" + familytreesearchsuggestionsFamilycreatures).on('click', 'li', function() {
         if(showAll) familytree.cleanPresentation(HARD);
-        orientdb.getFamilytreeSingle2(this.id, familytree.updateGraph);
+        orientdb.getFamilytreeSingle2(this.id, familytree.initializeGraph);
         showAll = false;
         $(this).addClass("active");
     });
 
     familytree.events.on("node_dblclick", function(d){
-        orientdb.getFamilytreeSingle2(d.ID + '|' + d.class, familytree.updateGraph);
+        orientdb.getFamilytreeSingle2(d.ID + '|' + d.class, familytree.initializeGraph);
     });
 
     familytree.events.on("node_click", function(d){
         orientdb.getInfo4CreatureByRID(d.ID);
+    });
+
+    familytree.events.on("node_contextmenu", function(clickedNode){
+        orientdb.deleteCreatureByRID(clickedNode, familytree.initializeGraph);
     });
 
     $("ul" + familytreesearchsuggestionsFamilycreatures).on('mouseenter mouseleave', 'li', function() {
