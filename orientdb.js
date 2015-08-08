@@ -61,15 +61,14 @@ var orientdb = (function () {
                 } else return currentJSON;
             },
             loadedSingle: function(key, value){
-                if(arguments.length == 2) return(loadedSingles.set(key, (fetchedSingle = clone(value))), this);
+                if(arguments.length == 2) return(loadedSingles.set(key, (clone(fetchedSingle = value))), this);
                 else return (fetchedSingle = clone(loadedSingles.get(key)))
             },
             mergeSingle: function(key){
                 if(key) this.loadedSingle(key);
-							currentJSON = (currentJSON || []).concat(fetchedSingle.filter(function(l){
+                currentJSON = (currentJSON || []).concat(fetchedSingle.filter(function(l){
                     return !currentLinks.has(linkKey(l))
                 }));
-                //generateNodes();
                 return this
             },
             deleteNode: function(clickedNode){
