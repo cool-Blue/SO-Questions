@@ -27,3 +27,45 @@ familytree-d3.js
  - use getFamilytreeAll2 with callback
  - can eliminate the decision in familytree.js and there, just call familytree.createGraph
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+current
+
+#orientdb.js
+-add getFamilytreeAll2
+ getFamilytreeAll2
+ - this object makes no decision about which familytree method to use
+ - add allJSON static, private member to cache the results
+ - add function to to return a cloned version of results
+   - this means that objects added by force.start are not added to allJSON
+-add getFamilytreeSingle2
+ getFamilytreeSingle2
+ - add argument for success calback
+- added loadedSingles d3.map object to cache and re-cycle results from getFamilytreeSingle2
+-subscribe to familytree node delete events and stash the relations record
+
+#familytree.js
+- modified the click on li for search suggestions
+  - use getFamilytreeSingle2 and specify the correct call-back
+  - hard reset the graph if showAll flag was set and clear showAll flag to enter relationship mode
+- add showAll flag
+  - this module is the controler so should be responsible for show all vs show relationships mode
+- set showAll flag on showAll button click
+- take over responsibility for click and doubleclick events in the graph
+  add listeners to the familytree.events object
+
+#familytree-d3.js
+ findDuplicatesAndSetEmpty
+ - allow for currentJSON not yet initialised
+ updateGraph
+ - allow for currentJSON not yet initialised
+ cleanPresentation
+ - added hard argument to force clear nodeCircles
+ add events property
+ - this is a d3.dispatch object for custom events management
+ - instead of comunicating with orientdb, just issue events without caring what to do about them
+   let the controller (familytree.js) manage what to do
+
+#index
+- load familytree-d3.js before familytree.js
+- load familytree-d3.js before orientdb.js
+ - load the service before the controller
