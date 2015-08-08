@@ -1,130 +1,13 @@
 var familytree = (function () {
-	var alreadyThere = false;
-	var nodeCircles = {};
 	var svg, link = {}, node = {};
 	var force = d3.layout.force();
 	var zoom;
 	var width = 1200, height = 900;
-	var initJSON, currentJSON;
 	var container;
-	var scale = 1;
-	var trans = "0,0";
-	var events = d3.dispatch("node_click", "node_dblclick", "node_contextmenu");
-
-	//initJSON.queery = queryJSON;
+	var events = d3.dispatch("node_click", "node_dblclick", "node_contextmenu"),
+			markerEnds = d3.range(1,9).reduce(function(m, d){return(m[d] = "url(#end" + d + ")", m)},{});
 
 	return {
-			cleanPresentation: function (hard) {
-				if(hard) {nodeCircles = {}; currentJSON = [];}
-				//force.nodes([]);
-				//force.links([]);
-				familytree.initializeGraph([], activeNodes());
-				alreadyThere = false;
-			},
-			getAlreadyThere: function () {
-					return alreadyThere;
-			},
-			createGraph: function (newJSON) {
-				familytree.initializeGraph(familytree.generateObjects(newJSON), activeNodes());
-				currentJSON = newJSON;
-				alreadyThere = true;
-			},
-			updateGraph: function (newJSON) {
-				// merge newJSON with existing graph
-				familytree.findDuplicatesAndSetEmpty(newJSON);
-				familytree.deleteEmptyObjectsInJSON(newJSON);
-				currentJSON = currentJSON ? currentJSON.concat(newJSON) : newJSON;
-				familytree.initializeGraph(familytree.generateObjects(currentJSON), activeNodes());
-			},
-			findDuplicatesAndSetEmpty: function (newJSON) {
-					for (var i = 0; currentJSON && i < currentJSON.length; i++) {
-							for (var o = 0; o < newJSON.length; o++) {
-									if ((currentJSON[i].source.ID == newJSON[o].source) && (currentJSON[i].target.ID == newJSON[o].target)
-											|| (currentJSON[i].source.ID == newJSON[o].target) && (currentJSON[i].target.ID == newJSON[o].source)) {
-											newJSON[o] = {};
-										break;	// the links are already unique so terminate if the entry is found
-									}
-							}
-					}
-			},
-			deleteEmptyObjectsInJSON: function (json) {
-					for (var i = 0; i < json.length; i++) {
-							var y = json[i].source;
-							if (y === "null" || y === null || y === "" || typeof y === "undefined") {
-									json.splice(i, 1);
-									i--;
-							}
-					}
-			},
-			updateGraphByRemoveElement: function (clickedNode, index) {
-					// remove links from or to clicked node
-				for (var i = 0; i < currentJSON.length; i++) {
-						if (currentJSON[i].source.ID == clickedNode.ID) {
-								currentJSON[i] = {};
-						} else if (currentJSON[i].target.ID == clickedNode.ID) {
-								currentJSON[i] = {};
-						}
-				}
-				familytree.deleteEmptyObjectsInJSON(currentJSON);
-				familytree.deleteNode(force.nodes(), clickedNode);
-				familytree.updateForce(familytree.generateObjects(currentJSON));
-			},
-			deleteNode: function (allNodes, clickedNode) {
-					allNodes.forEach(function (node) {
-							if (node == clickedNode) {
-									force.links().forEach(function (link) {
-											if (node.ID == link.source.ID) {
-													link.target.linkCount--;
-											}
-											if (node.ID == link.target.ID) {
-													link.source.linkCount--;
-											}
-									});
-									node.linkCount = 0;
-							}
-					});
-			},
-			generateObjects: function (json) {
-				// connect links to existing nodes or generate new nodes based on links source and target
-					json.forEach(function (link) {
-						// new links will have strings for source and target, skip others
-						// A filtered version of nodeCircles is passed to the force,
-						// so the original node data is retained in it's entirety
-							if (typeof(link.source) == "string") {
-									link.source = nodeCircles[link.source] || (
-											nodeCircles[link.source] = {
-													name: link.sourceName,
-													significance: link.sourceSign,
-													uniquename: link.sourceUName,
-													ID: link.source,
-													class: link.sourceClass,
-													relation: link.relation,
-													race: link.sourceRace,
-													linkCount: 0
-											}
-										);
-									link.source.linkCount++;
-							}
-							if (typeof(link.target) == "string") {
-									link.target = nodeCircles[link.target] || (
-											nodeCircles[link.target] = {
-												name: link.targetName,
-												significance: link.targetSign,
-												uniquename: link.targetUName,
-												ID: link.target,
-												class: link.targetClass,
-												relation: link.relation,
-												race: link.targetRace,
-												linkCount: 0}
-										);
-									link.target.linkCount++;
-							}
-					});
-					return json;
-			},
-			updateForce: function (links) {
-				updateData(links, force, nodeCircles)
-			},
 			initializeGraph: (function(){
 				force
 					.size([width, height])
@@ -146,6 +29,7 @@ var familytree = (function () {
 					hookDrag(force.drag(), "dragstart.force", function(d) {
 						//prevent dragging on the nodes from dragging the canvas
 						var e = d3.event.sourceEvent;
+						e.preventDefault();
 						if(e.button != 2) {
 							//left click only
 							e.stopPropagation();
@@ -170,7 +54,7 @@ var familytree = (function () {
 					container = svg.selectAll("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
 					container.enter().append("g").attr("id", "container");
 
-					var links = container.selectAll(".links").data(function(d){
+					var links = container.selectAll(".links").data(function(d) {
 						return d.links
 					});
 					links.enter().append("g").attr("class", "links");
@@ -191,19 +75,7 @@ var familytree = (function () {
 					})
 						.attr("marker-end", function (d) {
 							if (d.relation == "BEGETS") {
-								switch (d.targetSign) {
-									case 1: return "url(#end1)"; break;
-									case 2: return "url(#end2)"; break;
-									case 3: return "url(#end3)"; break;
-									case 4: return "url(#end4)"; break;
-									case 5: return "url(#end5)"; break;
-									case 6: return "url(#end6)"; break;
-									case 7: return "url(#end7)"; break;
-									case 8: return "url(#end8)"; break;
-									case 9: return "url(#end9)"; break;
-									default:
-										return "url(#end1)";
-								}
+								return markerEnds[d.targetSign] || "url(#end1)"
 							}
 						});
 
@@ -218,9 +90,6 @@ var familytree = (function () {
 					newNode
 						.on("mouseover", familytree.mouseover)
 						.on("mouseout", familytree.mouseout)
-						//.on("click", function (d) {
-						//    familytree.click(d);
-						//})
 						.on("dblclick", function (d) {
 							familytree.dblclick(d);
 						})
@@ -441,19 +310,6 @@ var familytree = (function () {
 				events.node_dblclick(d);
 			}
 	};
-	function activeNodes(){
-		return d3.values(nodeCircles).filter(function (d) {
-			return d.linkCount;
-		})
-	}
-	function updateData(links, force, nodes) {
-		force.nodes(d3.values(nodes).filter(function (d) {
-			return d.linkCount;
-		}));
-		//force.links(d3.values(links));    //TODO links is already an array, this does nothing
-		force.links(links);
-		familytree.initializeGraph();
-	}
 	function zoomableSVG (size, selector, z){
 			//delivers an svg background with zoom/drag context in the selector element
 			//if height or width is NaN, assume it is percentage and ignore margin

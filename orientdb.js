@@ -1,7 +1,6 @@
 var orientdb = (function () {
-    var allJSON,
-        loadedSingles = d3.map();
 
+    // Data Repository
     var treeData = (function(){
         var allJSON = [],
             loadedSingles = d3.map(), fetchedSingle;
@@ -56,7 +55,6 @@ var orientdb = (function () {
             JSON: function(j){
                 if(j) {
                     currentJSON = clone(j);
-                    //generateNodes();
                     return this
                 } else return currentJSON;
             },
@@ -86,12 +84,14 @@ var orientdb = (function () {
 
 								clickedNode.linkCount = 0;
 
-								//delete currentNodes[clickedNode.ID];
-								//generateNodes();
 								return this;
             },
             clearAll: function(){
-                currentJSON = []; currentLinks = d3.map(); currentNodes = {};
+                // bulk delete
+                // delete all links and discard references to them
+                currentJSON = []; currentLinks = d3.map();
+                // set nodes link count to zero, but keep references to the same objects
+                d3.values(currentNodes).forEach(function(d){d.linkCount = 0});
                 return this
             },
             setAll: function(){
@@ -117,6 +117,7 @@ var orientdb = (function () {
         }
     })();
 
+    // Data Interface
     return {
         getFamilytreeAll           : function() {
             $.ajax({
