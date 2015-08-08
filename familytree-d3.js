@@ -208,15 +208,16 @@ var familytree = (function () {
 						});
 
 					var nodes = container.selectAll(".nodes").data(function(d){
-						return d.activeNodes
+						return d.nodes
 					});
 					nodes.enter().append("g").attr("class", "nodes");
 
 					node = nodes.selectAll(".node").data(id, nodeKey);
 					var newNode = node.enter().append("g").attr("class", "node");
 					node.exit().remove();
-					newNode.on("mouseover", this.mouseover)
-						.on("mouseout", this.mouseout)
+					newNode
+						.on("mouseover", familytree.mouseover)
+						.on("mouseout", familytree.mouseout)
 						//.on("click", function (d) {
 						//    familytree.click(d);
 						//})

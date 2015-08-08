@@ -48,60 +48,72 @@ var orientdb = (function () {
             });
         }
 
-        function linkKey(link) {return link.source.ID || link.source + link.target.ID || link.target}
+        function linkKey(link) {
+            return (link.source.ID || link.source) + (link.target.ID || link.target)
+        }
 
         return {
             JSON: function(j){
                 if(j) {
                     currentJSON = clone(j);
-                    generateNodes();
+                    //generateNodes();
                     return this
                 } else return currentJSON;
             },
             loadedSingle: function(key, value){
-                if(arguments.length == 2) return(loadedSingles.set(key, (fetchedSingle = value)), this);
-                else return (fetchedSingle = loadedSingles.get(key))
+                if(arguments.length == 2) return(loadedSingles.set(key, (fetchedSingle = clone(value))), this);
+                else return (fetchedSingle = clone(loadedSingles.get(key)))
             },
             mergeSingle: function(key){
                 if(key) this.loadedSingle(key);
-                (currentJSON || []).concat(fetchedSingle.filter(function(l){
+							currentJSON = (currentJSON || []).concat(fetchedSingle.filter(function(l){
                     return !currentLinks.has(linkKey(l))
                 }));
-                generateNodes();
+                //generateNodes();
                 return this
             },
             deleteNode: function(clickedNode){
-                // remove links from or to clicked node
-                for (var i = 0; i < currentJSON.length; i++) {
-                    if (currentJSON[i].source.ID == clickedNode.ID) {
-                        currentJSON[i] = {};
-                    } else if (currentJSON[i].target.ID == clickedNode.ID) {
-                        currentJSON[i] = {};
-                    }
-                }
-                currentJSON = currentJSON.filter(function(d){return d});
-                delete currentNodes[clickedNode.ID];
-                generateNodes();
-                return this;
+            // remove links from or to clicked node
+								currentJSON.forEach(function (link, i) {
+										if (link.source.ID == clickedNode.ID) {
+											link.target.linkCount--;
+											delete currentJSON[i];
+										} else if (link.target.ID == clickedNode.ID) {
+											link.source.linkCount--;
+											delete currentJSON[i];
+										}
+								});
+								currentJSON = currentJSON.filter(function(d){return d});
+
+								clickedNode.linkCount = 0;
+
+								//delete currentNodes[clickedNode.ID];
+								//generateNodes();
+								return this;
             },
-            set currentLinks(a){},
-            get currentLinks(){},
-            set currentNodes(a){},
-            get currentNodes(){},
+            clearAll: function(){
+                currentJSON = []; currentLinks = d3.map(); currentNodes = {};
+                return this
+            },
             setAll: function(){
                 allJSON = clone(currentJSON);
                 return this
             },
-            getAll: function(ifHave) {
-                return allJSON.length ? (ifHave(clone(allJSON)), true) : false;
+            getAll: function() {
+							var exists = allJSON.length;
+							if(exists) currentJSON = clone(allJSON);
+                return exists;
             },
             dataSet: function(callBack){
-                callBack( {
-                    nodes: d3.values(currentNodes).filter(function (d) {
-                        return d.linkCount;
-                    }),
-                    links: currentJSON  //TODO clone? currently not to help generateNodes
-                })
+              if (callBack){
+								generateNodes();
+								callBack({
+									nodes: d3.values(currentNodes).filter(function(d) {
+										return d.linkCount;
+									}),
+									links: currentJSON  //TODO clone? currently not to help generateNodes
+								});
+							}
             }
         }
     })();
@@ -119,9 +131,8 @@ var orientdb = (function () {
                 }
             });
         },
-        getFamilytreeAll2          : (function() {
-            return function(onSuccess) {
-                if(!treeData.getAll(onSuccess)) {
+        getFamilytreeAll2          : function(onSuccess) {
+                if(treeData.getAll(onSuccess)) return treeData.dataSet(onSuccess);
                     $.ajax({
                         url    : urlOrientDB + "getFamilytreeAll/",
                         headers: {
@@ -131,9 +142,7 @@ var orientdb = (function () {
                             treeData.JSON(result.result).setAll().dataSet(onSuccess);
                         }
                     });
-                }
-            }
-        })(),
+            },
         getFamilytreeSingle        : function(rid) {
             var infos = rid.split('|');
             $.ajax({
@@ -153,8 +162,7 @@ var orientdb = (function () {
         },
         getFamilytreeSingle2       : function(rid, onSuccess) {
             var infos = rid.split('|');
-            if(treeData.loadedSingle(infos[0])) treeData.mergeSingle().dataSet(onSuccess);
-            if(rels = treeData.loadedSingle(infos[0])) return onSuccess(rels);
+            if(treeData.loadedSingle(infos[0])) return treeData.mergeSingle().dataSet(onSuccess);
             $.ajax({
                 url    : urlOrientDB + "getFamilytreeSingle/" + infos[0].substring(1, infos[0].length),
                 headers: {
@@ -197,8 +205,11 @@ var orientdb = (function () {
                 }
             });
         },
-        deleteCreatureByRID: function(id, onSuccess){
-            treeData.deleteNode(id).dataSet(onSuccess)
+        deleteCreatureByRID: function(clickedNode, onSuccess){
+            treeData.deleteNode(clickedNode).dataSet(onSuccess)
+        },
+        clearAll: function(callback){
+            treeData.clearAll().dataSet(callback)
         },
         showInfo4Creature          : function(result) {
             if($('#infoinner').css("width") == "0px") {

@@ -15,7 +15,7 @@ var familytreeController = (function() {
     });
 
     $("#familytreeHideallbutton").click(function() {
-        familytree.cleanPresentation();
+        orientdb.clearAll(familytree.initializeGraph);
     });
 
     d3.select('#familytreeUnfixallbutton').on('click', function() {
@@ -36,7 +36,7 @@ var familytreeController = (function() {
     });
 
     $("ul" + familytreesearchsuggestionsFamilycreatures).on('click', 'li', function() {
-        if(showAll) familytree.cleanPresentation(HARD);
+        if(showAll)  orientdb.clearAll();
         orientdb.getFamilytreeSingle2(this.id, familytree.initializeGraph);
         showAll = false;
         $(this).addClass("active");
