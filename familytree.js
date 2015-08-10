@@ -36,14 +36,20 @@ var familytreeController = (function() {
 	});
 
 	$("ul" + familytreesearchsuggestionsFamilycreatures).on('click', 'li', function() {
-		if(showAll)  orientdb.clearAll();
-		orientdb.getFamilytreeSingle2(this.id, familytree.initializeGraph);
-		showAll = false;
+		//if(showAll)  orientdb.clearAll();
+		var id = this.id.split("|")[0];
+		orientdb.stageFamilytreeSingle(this.id, function() {
+			var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id];
+			familytree.zoomTo([n.x, n.y]);
+		});
+		//showAll = false;
 		$(this).addClass("active");
 	});
 
 	familytree.events.on("node_dblclick", function(d) {
-		orientdb.getFamilytreeSingle2(d.ID + '|' + d.class, familytree.initializeGraph);
+		orientdb.stageFamilytreeSingle(d.ID + '|' + d.class, function() {
+			this.mergeSingle().dataSet(familytree.initializeGraph)
+		});
 	});
 
 	familytree.events.on("node_click", function(d) {

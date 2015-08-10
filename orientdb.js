@@ -58,10 +58,12 @@ var orientdb = (function() {
 					return this
 				} else return currentJSON;
 			},
+			get nodes(){return currentNodes},
 			loadedSingle: function(key, value) {
 				if(arguments.length == 2) return (loadedSingles.set(key, (clone(fetchedSingle = value))), this);
 				else return (fetchedSingle = clone(loadedSingles.get(key)))
 			},
+			get fetchedSingle(){return fetchedSingle},
 			mergeSingle : function(key) {
 				if(key) this.loadedSingle(key);
 				currentJSON = (currentJSON || []).concat(fetchedSingle.filter(function(l) {
@@ -71,12 +73,15 @@ var orientdb = (function() {
 			},
 			deleteNode  : function(clickedNode) {
 				// remove links from or to clicked node
+				console.log("Deleting " + clickedNode.name)
 				currentJSON.forEach(function(link, i) {
 					if(link.source.ID == clickedNode.ID) {
 						link.target.linkCount--;
+						console.log(link.relation + "\t" + link.targetName + "\tlinkCount reduced to: " + link.target.linkCount)
 						delete currentJSON[i];
 					} else if(link.target.ID == clickedNode.ID) {
 						link.source.linkCount--;
+						console.log(link.relation + "\t" + link.sourceName + "\tlinkCount reduced to: " + link.source.linkCount)
 						delete currentJSON[i];
 					}
 				});
@@ -118,12 +123,14 @@ var orientdb = (function() {
 						links: currentJSON  //TODO clone? currently not to help generateNodes
 					});
 				}
+				return this;
 			}
 		}
 	})();
 
 	// Data Interface
 	return {
+		treeData: treeData,
 		getFamilytreeAll           : function() {
 			$.ajax({
 				url    : urlOrientDB + "getFamilytreeAll/",
@@ -176,6 +183,21 @@ var orientdb = (function() {
 				success: function(result) {
 					treeData.loadedSingle(infos[0], result.result);
 					treeData.mergeSingle().dataSet(onSuccess);
+					console.log(relationships(result.result))
+				}
+			});
+		},
+		stageFamilytreeSingle       : function(rid, then) {
+			var infos = rid.split('|');
+			if(treeData.loadedSingle(infos[0])) return then.call(treeData);
+			$.ajax({
+				url    : urlOrientDB + "getFamilytreeSingle/" + infos[0].substring(1, infos[0].length),
+				headers: {
+					"Authorization": "Basic " + btoa("arda" + ":" + "arda")
+				},
+				success: function(result) {
+					treeData.loadedSingle(infos[0], result.result);
+					return then.call(treeData);
 				}
 			});
 		},
@@ -195,7 +217,20 @@ var orientdb = (function() {
 					"Authorization": "Basic " + btoa("arda" + ":" + "arda")
 				},
 				success: function(result) {
+					result.rid = rid;
 					orientdb.showInfo4Creature(result);
+				}
+			});
+		},
+		getInfo4CreatureByRID2      : function(rid, onSuccess) {
+			$.ajax({
+				url    : urlOrientDB + "getInfo4CreatureByRID/" + rid.substring(1, rid.length),
+				headers: {
+					"Authorization": "Basic " + btoa("arda" + ":" + "arda")
+				},
+				success: function(result) {
+					result.rid = rid;
+					onSuccess(result);
 				}
 			});
 		},
@@ -259,10 +294,18 @@ var orientdb = (function() {
 			$('#infoCreature > .inforace > .infosubtext').html(res[0].race);
 			$('#infoCreature > .infolife > .infosubtext').html(res[0].born);
 			$('#infoCreature > .infolife > .infosubtext').html(" until " + res[0].died);
-			$("#infoCreature > .infolocation > .infosubtext").html("<ul></ul>");
-			for(var i = 0; i < res[0].location.length; i++) {
-				$("#infoCreature > .infolocation > .infosubtext ul").append("<li>" + res[0].location[i] + "</li>");
-			}
+			$('#infoCreature > .infolife > .infosubtext').html(" until " + res[0].died);
+
+			var rel = d3.select("#infoCreature > .inforelations > .infosubtext");
+			rel.selectAll("ul").data([[""]]).exit().remove();
+			orientdb.stageFamilytreeSingle(result.rid, function() {
+				list(rel.node(), relationships(this.fetchedSingle))
+			});
+			
+			var loc = d3.select("#infoCreature > .infolocation > .infosubtext");
+			loc.selectAll("ul").data([[""]]).exit().remove();
+			list(loc.node(), res[0].location);
+
 			$('#infoCreature > .infolink').html("<a href=" + res[0].gatewaylink + ">More infos on TolkienGateway</a>");
 		},
 		getInfo4EventByUName       : function(uname) {
@@ -468,8 +511,29 @@ var orientdb = (function() {
 			});
 		}
 	};
+	function relationshipsText(r){
+		return r.reduce(function(s, d, i){
+			return (s + [(i ? "\n" : ""), d.sourceName, d.relation, d.targetName].join(" "))
+		}, "")
+	}
+	function relationships(r){
+		return r.map(function(d){
+			return ([d.sourceName, d.relation, d.targetName].join(" "))
+		})
+	}
+	function list(base, rows){
+		var ul = d3.select(base).selectAll("ul")
+					.data([rows]),
+				ulEnter = ul.enter().append("ul"),
+				li = ul.selectAll("li").data(ID);
+		li.enter().append("li");
+		li.exit().remove();
+		li.text(ID)
+
+	}
 	function clone(o) {
 		return o ? JSON.parse(JSON.stringify(o)) : null;
 	}
+	function ID(d){return d}
 
 })();

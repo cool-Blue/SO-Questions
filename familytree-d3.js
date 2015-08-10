@@ -1,30 +1,30 @@
 var familytree = (function() {
 	var svg, link = {}, node = {};
-	var force = d3.layout.force();
 	var zoom;
 	var width = 1200, height = 900;
 	var container;
 	var events     = d3.dispatch("node_click", "node_dblclick", "node_contextmenu"),
 			markerEnds = d3.range(1, 9).reduce(function(m, d) {
 				return (m[d] = "url(#end" + d + ")", m)
-			}, {});
+			}, {}),
+		fdg = (function() {
+			var force = d3.layout.force()
+						.size([width, height])
+						.gravity(.2)
+						.charge(-400)
+						.friction(0.9)
+						.theta(0.9)
+						.linkStrength(1)
+						.distance(100)
+						.on("tick", tick),
+					fdg = {};
 
-	return {
-		initializeGraph: (function() {
-			force
-				.size([width, height])
-				.gravity(.2)
-				.charge(-400)
-				.friction(0.9)
-				.theta(0.9)
-				.linkStrength(1)
-				.distance(100)
-				.on("tick", tick)
-			return function(dataSet) {
+			svg = zoomableSVG({width: "100%", height: "100%"}, "#familytreecontentsvg", {extent: [0.4, 4], dblclk: null});
+
+			function data(dataSet) {
 				force
 					.nodes(dataSet.nodes)
 					.links(dataSet.links)
-				svg = zoomableSVG({width: "100%", height: "100%"}, "#familytreecontentsvg", {extent: [0.4, 4], dblclk: null});
 
 				svg.onZoom(zoomed);
 
@@ -45,6 +45,7 @@ var familytree = (function() {
 					d.fixed = e.shiftKey || d.fixed;
 				});
 
+				//DEFs
 				var varsvgMarker = svg.selectAll("defs")
 					.data([["end"]])
 					.enter().append("defs")
@@ -53,7 +54,7 @@ var familytree = (function() {
 					.enter();
 				familytree.createMarker(varsvgMarker);
 
-				container = svg.selectAll("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
+				container = svg.container("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
 				container.enter().append("g").attr("id", "container");
 
 				var links = container.selectAll(".links").data(function(d) {
@@ -151,32 +152,15 @@ var familytree = (function() {
 
 				function hookDrag(target, event, hook) {
 					//hook force.drag behaviour
-					var stdDragStart = target.on(event);
+					var stdDrag = target.on(event);
 					target.on(event, function(d) {
 						hook.call(this, d);
-						stdDragStart.call(this, d);
+						stdDrag.call(this, d);
 					});
 				}
 
 				function zoomed() {
-					var e       = d3.event.sourceEvent,
-							isWheel = e && ((e.type == "mousewheel") || (e.type == "wheel"));
 					force.alpha(0.01);
-					return isWheel ? zoomWheel.call(this) : zoomInst.call(this)
-				}
-
-				function zoomInst() {
-					var t = d3.transform(container.attr("transform"));
-					t.translate = d3.event.translate;
-					t.scale = d3.event.scale;
-					container.attr("transform", t.toString());
-				}
-
-				function zoomWheel() {
-					var t = d3.transform(container.attr("transform"));
-					t.translate = d3.event.translate;
-					t.scale = d3.event.scale;
-					container.transition().duration(450).attr("transform", t.toString());
 				}
 
 				function imgHref(d) {
@@ -187,7 +171,28 @@ var familytree = (function() {
 					return this.href ? d3.select(this).attr("href") : imgHref(d);
 				}
 
+				// zoom context services
+				//  content is the target for zoom movements in zoomed
+				d3.rebind(fdg, container, "attr");
+
+				//  access the current transform state in zoom listener coordinates
+				d3.rebind(fdg, svg, "translate")
+				return this;
 			};
+
+			d3.rebind(fdg, svg, "zoomTo");
+			fdg.zoomTime = (function() {
+				var _t;
+				return function(t) {
+					if(t == undefined) return _t;
+					if(t == null) return (fdg.zoomTo = svg.zoomTo, this);
+					fdg.zoomTo = svg.zoomTo.bind(null, _t = t);
+					return this;
+				}
+			})();
+			fdg.data = data;
+
+			return fdg;
 
 			function tick() {
 				link
@@ -209,7 +214,11 @@ var familytree = (function() {
 					});
 			}
 
-		})(),
+		})().zoomTime(1000);
+
+	return {
+		initializeGraph: fdg.data,
+		zoomTo: fdg.zoomTo,
 		createMarker   : function(svg) {
 			//http://stackoverflow.com/questions/15495762/linking-nodes-of-variable-radius-with-arrows
 			var obj = [38, 43, 50, 54, 60, 65, 70, 80, 85];
@@ -353,13 +362,22 @@ var familytree = (function() {
 				percentW = isNaN(size.width), percentH = isNaN(size.height),
 				w        = percentW ? size.width : size.width - margin.left - margin.right,
 				h        = percentH ? size.height : size.height - margin.top - margin.bottom,
+				zoomStart   = function() {
+					return this
+				},
 				zoomed   = function() {
 					return this
 				},
+				container,
 
 				zoom     = zoom || d3.behavior.zoom().scaleExtent(z && z.extent || [0.4, 4])
 						.on("zoom", function(d, i, j) {
+							onZoom.call(this, d, i, j);
 							zoomed.call(this, d, i, j);
+						})
+						.on("zoomstart", function(d, i, j){
+							onZoomStart.call(this, d, i, j);
+							zoomStart.call(this, d, i, j);
 						});
 
 		var svg = d3.select(selector).selectAll("svg").data([["transform root"]]);
@@ -376,11 +394,65 @@ var familytree = (function() {
 					.style({"pointer-events": "all"});
 		if(z && (typeof z.dblclk != "undefined")) gEnter.on("dblclick.zoom", z.dblclk);
 
+		function onZoomStart(){
+			// zoom translate and scale are initially [0,0] and 1
+			// this needs to be aligned with the container to stop
+			// jump back to zero before first jump transition
+			var t = d3.transform(container.attr("transform"));
+			zoom.translate(t.translate); zoom.scale(t.scale[0]);
+		}
+
+		function onZoom(){
+			var e = d3.event.sourceEvent,
+					isWheel = e && ((e.type == "mousewheel") || (e.type == "wheel")),
+					t = d3.transform(container.attr("transform"));
+			t.translate = d3.event.translate; t.scale = [d3.event.scale, d3.event.scale];
+			return isWheel ? zoomWheel.call(this, t, container) : zoomInst.call(this, t, container)
+		}
+		function zoomInst(t, target){
+			target.attr("transform", t.toString());
+		}
+		function zoomWheel(t, target){
+			target.transition().duration(450).attr("transform", t.toString());
+		}
+
 		g.h = h;
 		g.w = w;
+
+		g.container = function(selection){
+			var d3_data, d3_datum;
+			if(selection) {
+				container = g.selectAll(selection);
+				// temporarily subclass container
+				d3_data = container.data;
+				d3_datum = container.datum;
+				// need a reference to the update selection
+				// so force data methods back to here
+				container.data = function() {
+					delete container.data;	// remove the sub-classing
+					return container = d3_data.apply(container, arguments)
+				}
+				container.datum = function() {
+					delete container.datum;	// remove the sub-classing
+					return container = d3_datum.apply(container, arguments)
+				}
+			}
+			return container;
+		}
+
 		g.onZoom = function(cb) {
 			zoomed = cb;
 		};
+		g.onZoomStart = function(cb) {
+			zoomStart = cb;
+		};
+		g.zoomTo = function(t, p){
+			var p0 = zoom.translate();
+			(t ? g.transition().duration(t) : g)
+				.call(zoom.translate(p0.map(function(d, i){return d  + (i ? p[i] : p[i])})).event)
+		};
+		d3.rebind(g, zoom, "translate");
+		d3.rebind(g, zoom, "scale");
 
 		return g;
 	}
@@ -388,9 +460,6 @@ var familytree = (function() {
 	function id(d) {
 		return d;
 	};
-	function queryJSON(rid, success) {
-		return this[id.split('|')[0]] || getFamilytreeSingle2(rid, success)
-	}
 })();
 
 d3.selection.prototype.moveToFront = function() {

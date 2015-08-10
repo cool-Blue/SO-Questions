@@ -28,7 +28,7 @@ familytree-d3.js
  - can eliminate the decision in familytree.js and there, just call familytree.createGraph
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-current
+86543cc
 
 #orientdb.js
 -add getFamilytreeAll2
@@ -57,15 +57,34 @@ current
  findDuplicatesAndSetEmpty
  - allow for currentJSON not yet initialised
  updateGraph
- - allow for currentJSON not yet initialised
+ - allow for currentJSON not yet initialised, add a ternary statement
  cleanPresentation
  - added hard argument to force clear nodeCircles
  add events property
  - this is a d3.dispatch object for custom events management
  - instead of comunicating with orientdb, just issue events without caring what to do about them
    let the controller (familytree.js) manage what to do
+ initializeGraph
+ - make links and nodes an argument of the returned function
+ - intergrate updateForce and updateData into here
+ add nodes to filter circles by link count
 
 #index
 - load familytree-d3.js before familytree.js
 - load familytree-d3.js before orientdb.js
  - load the service before the controller
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ISSUE: sometimes linkCount is wrong resulting in nodes not being deleted when they should
+#orientdb.js
+ stageFamilytreeSingle
+ - add this to allow queery of single tree without commiting to currentJSON
+ showInfo4Creature
+ - added relationships query and display
+ - fixed bug in locations list
+
+#familytree.js
+- modified the click on li for search suggestions
+  - use stageFamilytreeSingle and bring the control decisions back into here
+
+#info.css
+- added list format for relations
