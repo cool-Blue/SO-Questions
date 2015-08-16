@@ -41,7 +41,10 @@ var familytreeController = (function() {
 		var id = this.id.split("|")[0];
 		orientdb.stageFamilytreeSingle(this.id, function() {
 			var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id];
-			familytree.zoomTo(n);
+			if(n) {
+				familytree.zoomTo(n);
+				familytree.focusNode(n).highlight().delay(2000).blur();
+			}
 		});
 		//showAll = false;
 		$(this).addClass("active");
