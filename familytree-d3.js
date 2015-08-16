@@ -3,7 +3,8 @@ var familytree = (function() {
 	var zoom;
 	var width = 1200, height = 900;
 	var container;
-	var events     = d3.dispatch("node_click", "node_dblclick", "node_contextmenu"),
+	var eventNames = ["node_click", "node_dblclick", "node_contextmenu"],
+			events     = d3.dispatch.apply(null, eventNames),
 			markerEnds = d3.range(1, 9).reduce(function(m, d) {
 				return (m[d] = "url(#end" + d + ")", m)
 			}, {}),
@@ -190,7 +191,11 @@ var familytree = (function() {
 					return this;
 				}
 			})();
-			fdg.data = data;
+			fdg.data = data
+			fdg.focusNode = function (datum){
+				var n = nodes.filter(function(d){return datum === d;});
+
+			};
 
 			return fdg;
 
@@ -215,6 +220,21 @@ var familytree = (function() {
 			}
 
 		})().zoomTime(1000);
+
+	function highlight(selection){
+		var transition = selection.select("text").transition()
+			.duration(750)
+			.style("font-size", "15px")
+			.style("fill", "black");
+		selection.moveToFront();
+		return transition;
+	}
+	function blur(selection){
+		selection.select("text").transition()
+			.duration(750)
+			.style("font-size", "8px")
+			.style("fill", "#ccc");
+	}
 
 	return {
 		initializeGraph: fdg.data,
@@ -334,20 +354,13 @@ var familytree = (function() {
 					break;
 			}
 		},
-		mouseover      : function() {
-			d3.select(this).select("text").transition()
-				.duration(750)
-				.style("font-size", "15px")
-				.style("fill", "black");
-			d3.select(this).moveToFront();
-		},
-		mouseout       : function() {
-			d3.select(this).select("text").transition()
-				.duration(750)
-				.style("font-size", "8px")
-				.style("fill", "#ccc");
-		},
 		events         : events,
+		mouseover      : function () {
+			highlight(d3.select(this))
+		},
+		mouseout       : function () {
+			blur(d3.select(this));
+		},
 		click          : function(d) {
 			events.node_click(d);
 		},
@@ -407,13 +420,13 @@ var familytree = (function() {
 					isWheel = e && ((e.type == "mousewheel") || (e.type == "wheel")),
 					t = d3.transform(container.attr("transform"));
 			t.translate = d3.event.translate; t.scale = [d3.event.scale, d3.event.scale];
-			return isWheel ? zoomWheel.call(this, t, container) : zoomInst.call(this, t, container)
+			return isWheel ? zoomWheel.call(this, t) : zoomInst.call(this, t)
 		}
-		function zoomInst(t, target){
-			target.attr("transform", t.toString());
+		function zoomInst(t){
+			container.attr("transform", t.toString());
 		}
-		function zoomWheel(t, target){
-			target.transition().duration(450).attr("transform", t.toString());
+		function zoomWheel(t){
+			container.transition().duration(450).attr("transform", t.toString());
 		}
 
 		g.h = h;
@@ -425,16 +438,11 @@ var familytree = (function() {
 				container = g.selectAll(selection);
 				// temporarily subclass container
 				d3_data = container.data;
-				d3_datum = container.datum;
 				// need a reference to the update selection
 				// so force data methods back to here
 				container.data = function() {
 					delete container.data;	// remove the sub-classing
 					return container = d3_data.apply(container, arguments)
-				}
-				container.datum = function() {
-					delete container.datum;	// remove the sub-classing
-					return container = d3_datum.apply(container, arguments)
 				}
 			}
 			return container;
@@ -447,9 +455,11 @@ var familytree = (function() {
 			zoomStart = cb;
 		};
 		g.zoomTo = function(t, p){
-			var p0 = zoom.translate();
-			(t ? g.transition().duration(t) : g)
-				.call(zoom.translate(p0.map(function(d, i){return d  + (i ? p[i] : p[i])})).event)
+			// map p to the center of the plot surface
+			var s = zoom.scale(), bBox = surface.node().getBBox(),
+					w = bBox.width*s, h = bBox.height*s,
+					p1 = [w/2 - p.x * s, h/2 - p.y * s];
+			container.transition().duration(t).call(zoom.translate(p1).event);
 		};
 		d3.rebind(g, zoom, "translate");
 		d3.rebind(g, zoom, "scale");

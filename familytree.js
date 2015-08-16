@@ -2,6 +2,7 @@ var familytreeController = (function() {
 	var familytreesearchsuggestions = "#familytreesearchsuggestions";
 	var familytreesearchsuggestionsFamilycreatures = "#familytreesearchsuggestionsFamilycreatures";
 	var showAll, HARD = true;
+	var zoomToTransition = 1000;
 
 	$("#familytreecontentclose a").click(function() {
 		$("#familytree").hide();
@@ -40,13 +41,16 @@ var familytreeController = (function() {
 		var id = this.id.split("|")[0];
 		orientdb.stageFamilytreeSingle(this.id, function() {
 			var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id];
-			familytree.zoomTo([n.x, n.y]);
+			familytree.zoomTo(n);
 		});
 		//showAll = false;
 		$(this).addClass("active");
 	});
 
 	familytree.events.on("node_dblclick", function(d) {
+		familytree.zoomTo(d);
+		// try to get the relationship tree for the selected node and asynchronously
+		// merge it into the current tree if successful
 		orientdb.stageFamilytreeSingle(d.ID + '|' + d.class, function() {
 			this.mergeSingle().dataSet(familytree.initializeGraph)
 		});
