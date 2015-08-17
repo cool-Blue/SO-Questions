@@ -92,8 +92,8 @@ var familytree = (function() {
         var newNode = node.enter().append("g").attr("class", "node");
         node.exit().remove();
         newNode
-          .on("mouseover", familytree.mouseover)
-          .on("mouseout", familytree.mouseout)
+          .on("mouseover", mouseover)
+          .on("mouseout", mouseout)
           .on("dblclick", function(d) {
             events.node_dblclick(d);
           })
@@ -107,40 +107,40 @@ var familytree = (function() {
           .attr("class", "bgcircle");
         node.select("circle")
           .attr("r", function(d) {
-            return Math.abs(familytree.posXY(d));
+            return Math.abs(posXY(d));
           })
           .style("fill", function(d) {
-            return familytree.colourRace(d);
+            return colourRace(d);
           })
           .style("stroke", function(d) {
-            return familytree.colourRace(d);
+            return colourRace(d);
           });
         newNode
           .append("svg:image")
           .attr("class", "circle")
           .attr("xlink:href", imgHref)
           .attr("width", function(d) {
-            return familytree.sizeXY(d);
+            return sizeXY(d);
           })
           .attr("height", function(d) {
-            return familytree.sizeXY(d);
+            return sizeXY(d);
           })
           .on("error", function() {
             d3.select(this).style("visibility", "hidden");
           });
         node.select("image")
           .attr("x", function(d) {
-            return familytree.posXY(d);
+            return posXY(d);
           })
           .attr("y", function(d) {
-            return familytree.posXY(d);
+            return posXY(d);
           });
         newNode
           .append("text")
           .attr("class", "nodetext");
         node.select("text")
           .attr("x", function(d) {
-            return Math.abs(familytree.posXY(d) - 5);
+            return Math.abs(posXY(d) - 5);
           })
           .attr("y", 4)
           .text(function(d) {
@@ -255,6 +255,13 @@ var familytree = (function() {
 
     })().zoomTime(1000);
 
+  function mouseover() {
+    highlight(d3.select(this))
+  }
+  function mouseout() {
+    blur(d3.select(this));
+  }
+
   function highlight(selection){
     var s = svg.scale(), transition = selection.select("text").transition()
       .duration(750)
@@ -284,117 +291,51 @@ var familytree = (function() {
         .attr("d", "M0,-4L10,0L0,4");
     }
   }
-
+  function sizeXY(d) {
+    var deflt = -10;
+    return [deflt, 20, 24, 28, 32, 36, 40, 44, 48, 52][d.significance || 0] || deflt;
+  }
+  function posXY(d) {
+    var deflt = 10;
+    return [deflt, -10, -12, -14, -16, -18, -20, -22, -24, -26][d.significance || 0] || deflt;
+  }
+  function colourRace(d) {
+    return {
+        "Ainu"            : "#000",
+        "Arnorian"        : "#5D8AA8",
+        "Balrog"          : "#000",
+        "Dragon"          : "#900",
+        "Dwarf"           : "#996515",
+        "Elf"             : "#900020",
+        "Ent"             : "#5b3",
+        "Falmar/Falas Elf": "#0099CC",
+        "God"             : "#fff",
+        "Gondorian"       : "#393939",
+        "Half-Elf"        : "#900020",
+        "Hobbit"          : "#006600",
+        "Maia"            : "#9A03B5",
+        "Man"             : "#993D00",
+        "Nando"           : "#355E3B",
+        "Nazgûl"          : "#000",
+        "Noldo"           : "#090A67",
+        "Númenórean"      : "#007BA7",
+        "Orc"             : "#736326",
+        "Rohir"           : "#80461B",
+        "Sinda"           : "#949494",
+        "Spider"          : "#000",
+        "Teleri"          : "#4B0101",
+        "Tree"            : "#2b6",
+        "Troll"           : "#000",
+        "Vala"            : "#440D60",
+        "Vanya"           : "#FFCC00",
+        "Werewolf"        : "#000"
+      }[d.race] || "#aaa";
+  }
   return {
     initializeGraph: fdg.data,
     zoomTo: fdg.zoomTo,
     focusNode: fdg.focusNode,
-    sizeXY         : function(d) {
-      var deflt = -10;
-      return [deflt, 20, 24, 28, 32, 36, 40, 44, 48, 52][d.significance || 0] || deflt;
-    },
-    posXY          : function(d) {
-      var deflt = 10;
-      return [deflt, -10, -12, -14, -16, -18, -20, -22, -24, -26][d.significance || 0] || deflt;
-    },
-    colourRace     : function(d) {
-      switch((d.race)) {
-        case "Ainu":
-          return "#000";
-          break;
-        case "Arnorian":
-          return "#5D8AA8";
-          break;
-        case "Balrog":
-          return "#000";
-          break;
-        case "Dragon":
-          return "#900";
-          break;
-        case "Dwarf":
-          return "#996515";
-          break;
-        case "Elf":
-          return "#900020";
-          break;
-        case "Ent":
-          return "#5b3";
-          break;
-        case "Falmar/Falas Elf":
-          return "#0099CC";
-          break;
-        case "God":
-          return "#fff";
-          break;
-        case "Gondorian":
-          return "#393939";
-          break;
-        case "Half-Elf":
-          return "#900020";
-          break;
-        case "Hobbit":
-          return "#006600";
-          break;
-        case "Maia":
-          return "#9A03B5";
-          break;
-        case "Man":
-          return "#993D00";
-          break;
-        case "Nando":
-          return "#355E3B";
-          break;
-        case "Nazgûl":
-          return "#000";
-          break;
-        case "Noldo":
-          return "#090A67";
-          break;
-        case "Númenórean":
-          return "#007BA7";
-          break;
-        case "Orc":
-          return "#736326";
-          break;
-        case "Rohir":
-          return "#80461B";
-          break;
-        case "Sinda":
-          return "#949494";
-          break;
-        case "Spider":
-          return "#000";
-          break;
-        case "Teleri":
-          return "#4B0101";
-          break;
-        case "Tree":
-          return "#2b6";
-          break;
-        case "Troll":
-          return "#000";
-          break;
-        case "Vala":
-          return "#440D60";
-          break;
-        case "Vanya":
-          return "#FFCC00";
-          break;
-        case "Werewolf":
-          return "#000";
-          break;
-        default:
-          return "#aaa";
-          break;
-      }
-    },
     events         : events,
-    mouseover      : function () {
-      highlight(d3.select(this))
-    },
-    mouseout       : function () {
-      blur(d3.select(this));
-    },
   };
   function zoomableSVG(size, selector, z) {
     //delivers an svg background with zoom/drag context in the selector element

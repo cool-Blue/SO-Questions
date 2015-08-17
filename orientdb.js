@@ -8,9 +8,8 @@ var orientdb = (function() {
 
 		function generateNodes() {
 			currentLinks = d3.map();
-			//d3.values(currentNodes).forEach(function(d){d.linkCount = 0;});
 			// connect links to existing nodes or generate new nodes based on links source and target
-			currentJSON.forEach(function(link) {
+			currentJSON.forEach(function(link, index) {
 				// new links will have strings for source and target, skip others
 				// A filtered version of currentNodes is passed to the force,
 				// so the original node data is retained in it's entirety
@@ -24,10 +23,10 @@ var orientdb = (function() {
 								class       : link.sourceClass,
 								relation    : link.relation,
 								race        : link.sourceRace,
-								linkCount   : 0
+								links: d3.map()
 							}
 						);
-					link.source.linkCount++;
+					link.source.links.set(linkKey(link), "tail");
 				}
 				if(typeof(link.target) == "string") {
 					link.target = currentNodes[link.target] || (
@@ -39,10 +38,10 @@ var orientdb = (function() {
 								class       : link.targetClass,
 								relation    : link.relation,
 								race        : link.targetRace,
-								linkCount   : 0
+								links: d3.map()
 							}
 						);
-					link.target.linkCount++;
+					link.target.links.set(linkKey(link), "head");
 				}
 				currentLinks.set(linkKey(link), link)
 			});
@@ -59,6 +58,7 @@ var orientdb = (function() {
 					return this
 				} else return currentJSON;
 			},
+			get currentLinks(){return currentLinks},
 			get nodes(){return currentNodes},
 			loadedSingle: function(key, value) {
 				if(arguments.length == 2) return (loadedSingles.set(key, (clone(fetchedSingle = value))), this);
@@ -74,15 +74,12 @@ var orientdb = (function() {
 			},
 			deleteNode  : function(clickedNode) {
 				// remove links from or to clicked node
-				console.log("Deleting " + clickedNode.name)
 				currentJSON.forEach(function(link, i) {
 					if(link.source.ID == clickedNode.ID) {
-						link.target.linkCount--;
-						console.log(link.relation + "\t" + link.targetName + "\tlinkCount reduced to: " + link.target.linkCount)
+						if(!link.target.links.remove(linkKey(link))) console.log("remove failed!");
 						delete currentJSON[i];
 					} else if(link.target.ID == clickedNode.ID) {
-						link.source.linkCount--;
-						console.log(link.relation + "\t" + link.sourceName + "\tlinkCount reduced to: " + link.source.linkCount)
+						if(!link.source.links.remove(linkKey(link))) console.log("remove failed!");
 						delete currentJSON[i];
 					}
 				});
@@ -90,7 +87,7 @@ var orientdb = (function() {
 					return d
 				});
 
-				clickedNode.linkCount = 0;
+				clickedNode.links = d3.map();
 
 				return this;
 			},
@@ -101,7 +98,7 @@ var orientdb = (function() {
 				currentLinks = d3.map();
 				// set nodes link count to zero, but keep references to the same objects
 				d3.values(currentNodes).forEach(function(d) {
-					d.linkCount = 0
+					d.links = d3.map();
 				});
 				return this
 			},
@@ -123,7 +120,7 @@ var orientdb = (function() {
 					generateNodes();
 					callBack({
 						nodes: d3.values(currentNodes).filter(function(d) {
-							return d.linkCount;
+							return d.links.size();
 						}),
 						links: currentJSON  //TODO clone? currently not to help generateNodes
 					});

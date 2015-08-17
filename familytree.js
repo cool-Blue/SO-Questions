@@ -42,6 +42,7 @@ var familytreeController = (function() {
     orientdb.stageFamilytreeSingle(this.id, function() {
       var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id];
       if(n) {
+        orientdb.getInfo4CreatureByRID(id);
         familytree.zoomTo(n);
         familytree.focusNode(n).highlight().delay(2000).blur();
       }
