@@ -8,6 +8,7 @@ var orientdb = (function() {
 
 		function generateNodes() {
 			currentLinks = d3.map();
+			//d3.values(currentNodes).forEach(function(d){d.linkCount = 0;});
 			// connect links to existing nodes or generate new nodes based on links source and target
 			currentJSON.forEach(function(link) {
 				// new links will have strings for source and target, skip others
@@ -110,7 +111,11 @@ var orientdb = (function() {
 			},
 			getAll      : function() {
 				var exists = allJSON.length;
-				if(exists) currentJSON = clone(allJSON);
+				if(exists) {
+					currentJSON = (currentJSON || []).concat(clone(allJSON).filter(function(l) {
+						return !currentLinks.has(linkKey(l))
+					}));
+				}
 				return exists;
 			},
 			dataSet     : function(callBack) {
@@ -252,9 +257,7 @@ var orientdb = (function() {
 			treeData.clearAll().dataSet(callback)
 		},
 		showInfo4Creature          : function(result) {
-			if($('#infoinner').css("width") == "0px") {
-				$("#infobutton").click()
-			}
+			infoState.show(true);
 			$("#infoCreature").show();
 			$("#infoLocation").hide();
 			$("#infoEvent").hide();

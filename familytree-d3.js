@@ -37,7 +37,7 @@ var familytree = (function() {
             //left click only
             e.stopPropagation();
             d.fixed = e.shiftKey || e.touches && (e.touches.length > 1);
-            familytree.click(d)
+            events.node_click(d)
           }
         });
         hookDrag(force.drag(), "dragend.force", function(d) {
@@ -53,7 +53,7 @@ var familytree = (function() {
           .selectAll("marker")
           .data(id)
           .enter();
-        familytree.createMarker(varsvgMarker);
+        createMarker(varsvgMarker);
 
         container = svg.container("#container").data([{nodes: [force.nodes()], links: [force.links()]}]);
         container.enter().append("g").attr("id", "container");
@@ -95,7 +95,7 @@ var familytree = (function() {
           .on("mouseover", familytree.mouseover)
           .on("mouseout", familytree.mouseout)
           .on("dblclick", function(d) {
-            familytree.dblclick(d);
+            events.node_dblclick(d);
           })
           .on('contextmenu', function(data, index) {
             d3.event.preventDefault();
@@ -182,35 +182,54 @@ var familytree = (function() {
         return this;
 
       };
-      d3.rebind(fdg, svg, "zoomTo");
+      var zoomTo = svg.zoomTo.bind(null, 1000);
+      //d3.rebind(fdg, svg, "zoomTo");
+      fdg.zoomTo = (function() {
+        var _n;
+        return function(n) {
+          zoomTo(n || _n);
+          _n = n ? n : _n;
+        }
+      })();
       fdg.zoomTime = (function() {
         var _t;
         return function(t) {
           if(t == undefined) return _t;
-          if(t == null) return (fdg.zoomTo = svg.zoomTo, this);
-          fdg.zoomTo = svg.zoomTo.bind(null, _t = t);
+          if(t == null) return (zoomTo = svg.zoomTo, this);
+          zoomTo = svg.zoomTo.bind(null, _t = t);
           return this;
         }
       })();
-      fdg.focusNode = function (datum) {
-        var _n = node.filter(function(d) {
-          return datum === d;
-        }), _trans, _t;
-        return {
-          highlight: function(){
-            _trans = highlight(_n);
-            return this;
-          },
-          delay: function(t){_t = t; return this;},
-          blur: function(){
-            if(_trans) _trans.each("end.highlight", function(){ blur(_n, _t)});
-            else blur(_n);
-            return this;
+      fdg.focusNode = (function() {
+        var _datum; // previous datum is stored as default
+        return function(datum) {
+          _datum = datum || _datum;
+          // closure on a reference to the node and transform state
+          var _n = node.filter(function(d) {
+            return _datum === d;
+          }), _trans, _t;
+          // return an object with chainable methods
+          return {
+            highlight: function() {
+              _trans = highlight(_n);
+              return this;
+            },
+            delay    : function(t) {
+              _t = t;
+              return this;
+            },
+            blur     : function() {
+              if(_trans) _trans.each("end.highlight", function() {
+                blur(_n, _t)
+              });
+              else blur(_n);
+              return this;
+            }
           }
         }
-      };
+      })();
 
-      fdg.data = data
+      fdg.data = data;
 
       return fdg;
 
@@ -237,44 +256,39 @@ var familytree = (function() {
     })().zoomTime(1000);
 
   function highlight(selection){
-    var transition = selection.select("text").transition()
+    var s = svg.scale(), transition = selection.select("text").transition()
       .duration(750)
-      .style("font-size", "15px")
-      .style("fill", "black");
+      .style({"font-size": (s > 1 ? 15 : (15/s).toFixed()) + "px","fill": "black"});
     selection.moveToFront();
     return transition;
   }
   function blur(selection, delay){
     selection.select("text").transition()
       .duration(750)
-			.delay(delay || 0)
-      .style("font-size", "8px")
-      .style("fill", "#ccc");
+      .delay(delay || 0)
+      .style({"font-size": "8px", "fill": "#ccc",stroke: "none"});
   }
-  function pop(selection){
-    highlight(selection).each("end.highlight", blur, selection)
+  function createMarker(svg) {
+    //http://stackoverflow.com/questions/15495762/linking-nodes-of-variable-radius-with-arrows
+    var obj = [38, 43, 50, 54, 60, 65, 70, 80, 85];
+    for(var i = 0; i < obj.length; i++) {
+      svg.append("svg:marker")
+        .attr("id", "end" + (i + 1))
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", obj[i])
+        .attr("refY", -0.05)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("svg:path")
+        .attr("d", "M0,-4L10,0L0,4");
+    }
   }
 
   return {
     initializeGraph: fdg.data,
     zoomTo: fdg.zoomTo,
     focusNode: fdg.focusNode,
-    createMarker   : function(svg) {
-      //http://stackoverflow.com/questions/15495762/linking-nodes-of-variable-radius-with-arrows
-      var obj = [38, 43, 50, 54, 60, 65, 70, 80, 85];
-      for(var i = 0; i < obj.length; i++) {
-        svg.append("svg:marker")
-          .attr("id", "end" + (i + 1))
-          .attr("viewBox", "0 -5 10 10")
-          .attr("refX", obj[i])
-          .attr("refY", -0.05)
-          .attr("markerWidth", 6)
-          .attr("markerHeight", 6)
-          .attr("orient", "auto")
-          .append("svg:path")
-          .attr("d", "M0,-4L10,0L0,4");
-      }
-    },
     sizeXY         : function(d) {
       var deflt = -10;
       return [deflt, 20, 24, 28, 32, 36, 40, 44, 48, 52][d.significance || 0] || deflt;
@@ -381,12 +395,6 @@ var familytree = (function() {
     mouseout       : function () {
       blur(d3.select(this));
     },
-    click          : function(d) {
-      events.node_click(d);
-    },
-    dblclick       : function(d) {
-      events.node_dblclick(d);
-    }
   };
   function zoomableSVG(size, selector, z) {
     //delivers an svg background with zoom/drag context in the selector element
@@ -477,7 +485,7 @@ var familytree = (function() {
     g.zoomTo = function(t, p){
       // map p to the center of the plot surface
       var s = zoom.scale(), bBox = surface.node().getBBox(),
-          w = bBox.width*s, h = bBox.height*s,
+          w = bBox.width - infoState.width(), h = bBox.height,
           p1 = [w/2 - p.x * s, h/2 - p.y * s];
       container.transition().duration(t).call(zoom.translate(p1).event);
     };
