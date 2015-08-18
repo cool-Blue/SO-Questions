@@ -6,10 +6,35 @@ var orientdb = (function() {
 				loadedSingles = d3.map(), fetchedSingle;
 		var currentJSON = [], currentLinks = d3.map(), currentNodes = {};
 
+		function Connections() {
+			// manage the connected links amd use them to signal adjacent nodes
+			var links = d3.map(), otherEnd = {source: "target", target: "source"},
+					actions = {
+						delete : function() {
+							links.forEach(function(key, end) {
+								// properly disconnect links and delete them
+								currentLinks(key)[otherEnd[end]].links.remove(key);
+								currentLinks(key).remove();
+							});
+							// disconnect all links from the deleted node
+							links = d3.map();
+						},
+						connections: function() {
+
+						}
+
+					};
+			return Object.defineProperties(d3.rebind.apply(links, new Function(), links, d3.keys(links)), {
+				message: {
+					value: function(type, data) {actions[type](data);}
+				}
+			})
+		};
+
 		function generateNodes() {
 			currentLinks = d3.map();
 			// connect links to existing nodes or generate new nodes based on links source and target
-			currentJSON.forEach(function(link, index) {
+			currentJSON.forEach(function(link) {
 				// new links will have strings for source and target, skip others
 				// A filtered version of currentNodes is passed to the force,
 				// so the original node data is retained in it's entirety
@@ -23,7 +48,7 @@ var orientdb = (function() {
 								class       : link.sourceClass,
 								relation    : link.relation,
 								race        : link.sourceRace,
-								links: d3.map()
+								links: Connections()
 							}
 						);
 					link.source.links.set(linkKey(link), "tail");
@@ -38,7 +63,7 @@ var orientdb = (function() {
 								class       : link.targetClass,
 								relation    : link.relation,
 								race        : link.targetRace,
-								links: d3.map()
+								links: Connections()
 							}
 						);
 					link.target.links.set(linkKey(link), "head");
@@ -128,23 +153,12 @@ var orientdb = (function() {
 				return this;
 			}
 		}
+
 	})();
 
 	// Data Interface
 	return {
 		treeData: treeData,
-		getFamilytreeAll           : function() {
-			$.ajax({
-				url    : urlOrientDB + "getFamilytreeAll/",
-				headers: {
-					"Authorization": "Basic " + btoa("arda" + ":" + "arda")
-				},
-				success: function(result) {
-					var jsonResult = result.result;
-					familytree.createGraph(jsonResult);
-				}
-			});
-		},
 		getFamilytreeAll2          : function(onSuccess) {
 			if(treeData.getAll(onSuccess)) return treeData.dataSet(onSuccess);
 			$.ajax({
@@ -154,23 +168,6 @@ var orientdb = (function() {
 				},
 				success: function(result) {
 					treeData.JSON(result.result).setAll().dataSet(onSuccess);
-				}
-			});
-		},
-		getFamilytreeSingle        : function(rid) {
-			var infos = rid.split('|');
-			$.ajax({
-				url    : urlOrientDB + "getFamilytreeSingle/" + infos[0].substring(1, infos[0].length),
-				headers: {
-					"Authorization": "Basic " + btoa("arda" + ":" + "arda")
-				},
-				success: function(result) {
-					var jsonResult = result.result;
-					if(familytree.getAlreadyThere()) {
-						familytree.updateGraph(jsonResult);
-					} else {
-						familytree.createGraph(jsonResult);
-					}
 				}
 			});
 		},
