@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+<style>
+
+  .bar {
+    fill: steelblue;
+  }
+
+  .bar:hover {
+    fill: brown;
+  }
+
+  .axis {
+    font: 10px sans-serif;
+  }
+
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+
+  .x.axis path {
+    display: none;
+  }
+
+  select {
+    position: absolute;
+    top: 10px
+  }
+
+</style>
+<body>
+<select id="flter" name="flter" onchange="updateData(this.id)">
+  <option value=""></option>
+  <option value="DataSet0.csv">DataSet0</option>
+  <option value="DataSet1.csv">DataSet1</option>
+  <option value="DataSet2.csv">DataSet2</option>
+  <option value="DataSet3.csv">DataSet3</option>
+</select>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script>
+
+  var margin = {top: 60, right: 60, bottom: 90, left: 120},
+    width = 960 - margin.left - margin.right,
+    height = 700 - margin.top - margin.bottom,
+    svg = d3.select("body").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var x = d3.scale.ordinal()
+      .rangeRoundBands([0, width], .1, 0),
+    xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom"),
+    gX = svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")");
+
+  var y = d3.scale.linear()
+    .range([height, 0]),
+    yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left")
+      .ticks(10, "$"),
+    gY = svg.append("g")
+      .attr("class", "y axis");
+
+  function updateData(s){
+    var s = document.getElementById(s);
+
+    var fileName = s.value;
+
+    d3.csv(fileName, type, function(error, data) {
+      if (error) throw error;
+
+      x.domain(data.map(function(d) { return d.Letter; }));
+      y.domain([(d3.min(data, function(d) { return d.Value1; }) - 50), d3.max(data, function(d) { return d.Value1; })]);
+
+      gX.call(xAxis)
+        .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .attr("transform", "rotate(-15)" );
+
+      gY.call(yAxis)
+        // only add title once
+        .selectAll(".title")
+        .data(["Value1"])
+        .enter().append("text").attr("class", "title")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text(function(d){
+          return d
+        });
+
+      // GENERAL UPDATE PATTERN
+      // UPDATE
+      var bars = svg.selectAll(".bar")
+        .data(data);
+      // ENTER
+      bars.enter().insert("rect", ".axis")
+        .attr("class", "bar");
+      // UPDATE+ENTER
+      bars.attr("x", function(d) { return x(d.Letter); })
+        .attr("width", x.rangeBand())
+        .attr("y", function(d) { return y(d.Value1); })
+        .attr("height", function(d) { return height - y(d.Value1); });
+      // EXIT
+      bars.exit().remove();
+
+    });
+    function type(d) {
+      d.Value1 = +d.Value1;
+      return d;
+    }
+  }
+
+</script>
+</body>
+</html>
