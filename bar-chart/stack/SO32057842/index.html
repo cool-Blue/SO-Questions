@@ -4,11 +4,19 @@
   <meta charset="UTF-8">
   <title></title>
   <style>
+    body {
+      position: relative;
+    }
     .axis path,
     .axis line {
       fill: none;
       stroke: #000;
       shape-rendering: crispEdges;
+    }
+    .y.axis .tick line {
+      stroke: #ccc;
+      opacity: 0.5;
+      pointer-events: none;
     }
     .highlight {
       font-weight: bold ;
@@ -19,9 +27,8 @@
   </style>
 </head>
 <body>
-<div id="inputs"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="UTF-8"></script>
-<script src="https://rawgit.com/cool-Blue/d3-lib/master/inputs/select/select.js"></script>
+<script src="https://rawgit.com/cool-Blue/d3-lib/516508b6aa8d9ae724ceb194257226aa29d48fb7/inputs/select/select.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

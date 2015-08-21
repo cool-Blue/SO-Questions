@@ -1,6 +1,6 @@
 var width  = 600,
     height = 200,
-    padding = { left:50, right:200, top:30, bottom:30},
+    padding = { left:50, right:200, top:20, bottom:30},
     xRangeWidth = width - padding.left - padding.right,
     yRangeWidth = height - padding.top - padding.bottom;
 
@@ -61,11 +61,19 @@ function layer(d){
 
 var offsetSelect = d3.ui.select({
       before: "svg",
-      style: {display: "block"},
+      style: {position: "absolute", left: width - padding.right + 15 + "px", top: yRangeWidth + "px"},
       onUpdate: function() {
         update(dataSet1)
       },
-      data    : ["zero", "wiggle", "expand", "silhouette"]
+      data    : ["wiggle", "zero", "expand", "silhouette"]
+    }),
+    orderSelect = d3.ui.select({
+      before: "svg",
+      style: {position: "absolute", left: width - padding.right + 15 + "px", top: yRangeWidth - 20 + "px"},
+      onUpdate: function() {
+        update(dataSet1)
+      },
+      data    : ["inside-out", "default", "reverse"]
     }),
     stack = d3.layout.stack()
       .values(function(d){ return d.sales; })
@@ -101,22 +109,24 @@ var yAxisScale = d3.scale.linear()
       .attr("class", "y axis");
 
 var yScale = d3.scale.linear()
-  .range([0, yRangeWidth]);
+      .range([0, yRangeWidth]);
 
 var color = d3.scale.category10();
 
 function update(dataSet) {
 
-  var offsetType = offsetSelect.value(),
-    data = stack.offset(offsetType)(dataSet),
+  var data = stack.offset(offsetSelect.value())
+      .order(orderSelect.value())(dataSet),
       maxProfit = d3.max(data,function(d) {
         return d3.max(d.sales, function(s) {
           return s.profit + s.p0
         })
       });
 
+  function yDomain(){return [0, offsetSelect.value() == "expand" ? 1 : maxProfit]}
+
   xScale.domain(data[0].sales.map(function(d){ return d.year; }));
-  yAxisScale.domain([0, offsetType == "expand" ? 1 : maxProfit]);
+  yAxisScale.domain(yDomain());
   yScale.domain(yAxisScale.domain());
 
   var series = plotArea.selectAll(".series")
@@ -139,6 +149,20 @@ function update(dataSet) {
         .attr("width", 60)
         .on("mouseover", function(d, i) {
           var rect = d3.select(this), selectedYear = d.year;
+
+          if(offsetSelect.value() != "expand") {
+            var pMin = d3.min(data,function(d) {
+              return d3.min(d.sales.filter(function(p) {
+                return p.year == selectedYear
+              }), function(s) {
+                return s.p0
+              })
+            });
+            yAxisScale.domain([-pMin, yDomain()[1] - pMin]);
+          }
+          yAxis.tickSize(-xRangeWidth);
+          gY.transition().call(yAxis);
+
           series.selectAll("rect")
             .attr({"stroke": "white", "stroke-width": "initial"});
           rect
@@ -172,6 +196,9 @@ function update(dataSet) {
           var g = d3.select(this.parentNode).select("text");
           g.classed("highlight", false);
           g.text(g.text().split(":")[0])
+          yAxisScale.domain(yDomain());
+          yAxis.tickSize(null);
+          gY.transition().call(yAxis);
         });
 
   points.transition()
@@ -191,7 +218,7 @@ function update(dataSet) {
   gX.transition().call(xAxis);
   gY.transition().call(yAxis);
 
-  var labHeight = 50,
+  var labHeight = 40,
       labRadius = 10,
       label = series.selectAll(".label").data(function(d){return [d.name]}),
       newLabel = label.enter().append("g")
@@ -200,11 +227,24 @@ function update(dataSet) {
         .attr({"transform": "matrix(" + [1, 0, 0, -1, 0, yRangeWidth] + ")"});
 	label.exit().remove();
 
-  var labelCircle = label.selectAll("circle").data(aID);
+  var labelCircle = label.selectAll("circle").data(aID),
+      // take a moment to calculate the series order
+      s = dataSet.map(function(d, i) {
+        return stack.values()(d, i);
+      }),
+      points = s.map(function(d) {
+        return d.map(function(v, i) {
+          return [ stack.x()( v, i), stack.y()(v, i) ];
+        })
+      }),
+      p = d3.range(dataSet.length),
+
+      // reverse the order to map to screen coordinates
+      orders = d3.permute(p, stack.order()(points)).reverse();
 	labelCircle.enter().append("circle");
 	labelCircle.attr("cx", xRangeWidth + 20)
 		.attr("cy", function(d, i, j) {
-			return labHeight * j;
+			return labHeight * orders[j];
 		})
 		.attr("r", labRadius);
 
@@ -212,7 +252,7 @@ function update(dataSet) {
 	labelText.enter().append("text");
 	labelText.attr("x", xRangeWidth + 40)
 		.attr("y", function(d, i, j) {
-			return labHeight * j;
+			return labHeight * orders[j];
 		})
 		.attr("dy", labRadius / 2)
 		.text(function(d) {
