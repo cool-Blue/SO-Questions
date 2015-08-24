@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>http://stackoverflow.com/questions/32169881/update-pattern-d3</title>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.js"></script>
+  <style>
+    #myRange {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+<input type="range" id="myRange" max="2" min="0" step="1">
+
+<script>
+  var nuc = [{
+    "year": "2013",
+    "time": "Jun-13",
+    "yearTotal": "33",
+    "LAT": 11.7885,
+    "LON": -144.942,
+    "Jun-13": 4000
+  }, {
+    "year": "2013",
+    "time": "Jul-13",
+    "yearTotal": "43",
+    "LAT": 52.4378,
+    "LON": -50.1609,
+    "Jul-13": 5000
+  }, {
+    "year": "2013",
+    "time": "Aug-13",
+    "yearTotal": "53",
+    "LAT": 60.8248,
+    "LON": -87.8296,
+    "Aug-13": 10000
+  }]
+
+  var svg = d3.select('body')
+    .append('svg')
+    .attr('width',200)
+    .attr('height',100),
+    result = Range("body #myRange", "text")(nuc);
+  alert("initial value is " + result());
+
+  function Range(input, output){
+    var data, update,
+        range = d3.select(input)
+          .on('change',function(){
+        refresh.call(this);
+      }),
+        val = range.property("value");
+    function accessor(d) {
+      return d[val].yearTotal;
+    }
+    function refresh(v) {
+      val = v || this.value;
+      update = svg.selectAll(output).data([data]);
+      var enter = update.enter().append('text')
+        .attr("class", "enter")
+        .attr("dy", ".75em")
+        .style("fill-opacity", 1e-6);
+
+      update.text(accessor)
+        .style("fill-opacity", 0)
+        .transition()
+        .duration(750)
+        .attr("y", 0)
+        .style("fill-opacity", 1);
+    }
+    return function(_){
+      data = _;
+      refresh(range.property("value"));
+      return accessor.bind(null, data);
+    }
+  }
+
+</script>
+</body>
+
+</html>
