@@ -107,7 +107,8 @@ var yAxisScale = d3.scale.linear()
       .scale(yAxisScale)
       .orient("left"),
     gY    = svg.append("g")
-      .attr("class", "y axis");
+      .attr("class", "y axis")
+      .style("pointer-events", "none");
 
 var yScale = d3.scale.linear()
   .range([0, yRangeWidth]);
@@ -161,10 +162,8 @@ function update(dataSet) {
               })
             });
             yAxisScale.domain([-pMin, yDomain()[1] - pMin]);
+            gY.transition().call(yAxis).attr("transform", "translate(" + rect.attr("x") + ",0)");
           }
-          // overlay the grid lines
-          yAxis.tickSize(-xRangeWidth);
-          gY.transition().call(yAxis);
           // manage the highlighting
           series.selectAll("rect")
             .transition()
@@ -211,7 +210,7 @@ function update(dataSet) {
           g.text(g.text().split(":")[0])
           yAxisScale.domain(yDomain());
           yAxis.tickSize(6);
-          gY.transition().call(yAxis);
+          gY.transition().call(yAxis).attr("transform", "translate(0,0)");
           series.selectAll(".tooltip")
             .transition()
             .attr({opacity: 0})
