@@ -96,12 +96,12 @@ infoState = (function() {
     $("#infoClosebutton").click(function() {
         $("#infoContentSearch").hide();
     });
-    return {
+    return d3.rebind.bind(null, {
         width: width,
         show : function(yes) {
             if(yes && !infoState.width()) toggle();
             else if(!yes && infoState.width()) toggle();
         },
         events: events
-    }
+    }, events, "on").apply(null, events)
 })();

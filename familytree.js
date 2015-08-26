@@ -5,9 +5,13 @@ var familytreeController = (function() {
   var zoomToTransition = 1000;
 
   $("#familytreecontentclose a").click(function() {
+    /** TODO?
+     * Add shut-down code for familytree object?
+     */
     $("#familytree").hide();
     $("#familytreecontent").children().hide();
     $("#illustrator").css("z-index", "19");
+    infoState.events.on("widthChange", null);
   });
 
   $("#familytreeShowallbutton").click(function() {
@@ -40,18 +44,24 @@ var familytreeController = (function() {
     //if(showAll)  orientdb.clearAll();
     var id = this.id.split("|")[0];
     orientdb.stageFamilytreeSingle(this.id, function() {
-      var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id];
+      var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id],
+        shutDown = "force_slow";
       if(n) {
         orientdb.getInfo4CreatureByRID(id);
+        familytree.focusNode(n).highlight();
         familytree.zoomTo(n);
-        familytree.focusNode(n).highlight().delay(2000).blur();
+        familytree.on(shutDown, function(){
+          familytree.zoomTo(n);
+          familytree.focusNode(n).highlight().delay(2000).blur();
+          familytree.on(shutDown, null);
+        })
       }
     });
     //showAll = false;
     $(this).addClass("active");
   });
 
-  familytree.events.on("node_dblclick", function(d) {
+  familytree.on("node_dblclick", function(d) {
     //familytree.zoomTo(d);
     // try to get the relationship tree for the selected node and asynchronously
     // merge it into the current tree if successful
@@ -60,11 +70,11 @@ var familytreeController = (function() {
     });
   });
 
-  familytree.events.on("node_click", function(d) {
+  familytree.on("node_click", function(d) {
     orientdb.getInfo4CreatureByRID(d.ID);
   });
 
-  familytree.events.on("node_contextmenu", function(clickedNode) {
+  familytree.on("node_contextmenu", function(clickedNode) {
     orientdb.deleteCreatureByRID(clickedNode, familytree.initializeGraph);
   });
 
@@ -93,10 +103,12 @@ var familytreeController = (function() {
     orientdb.getFamilytreeSingle2(id, familytree.updateGraph);
   }
 
-  infoState.events.on("widthChange", function(deltaW){
-    if(familytree.zoomTo) {
-      familytree.zoomTo();
-      familytree.focusNode().highlight().delay(2000).blur();
-    }
+  familytree.on("graph_init", function(){
+    infoState.on("widthChange", function(deltaW){
+      if(familytree.data()) {
+        familytree.zoomTo();
+        familytree.focusNode().highlight().delay(2000).blur();
+      }
+    })
   })
 })();

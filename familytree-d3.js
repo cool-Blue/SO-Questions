@@ -3,12 +3,28 @@ var familytree = (function() {
   var zoom;
   var width = 1200, height = 900;
   var container;
-  var eventNames = ["node_click", "node_dblclick", "node_contextmenu"],
+  var eventNames = ["node_click", "node_dblclick", "node_contextmenu", "graph_init", "force_slow", "force_stop"],
       events     = d3.dispatch.apply(null, eventNames),
       markerEnds = d3.range(1, 9).reduce(function(m, d) {
         return (m[d] = "url(#end" + d + ")", m)
       }, {}),
-    fdg = (function(zt) {
+      slowAlpha = 0.08,
+      phasesAlpha = function(){
+        // todo
+        var p = [0.08, 0.04, 0.02, 0],i = 0;
+        return function(alpha){
+          if(aplha < (p[i])) i++; else if(alpha > p[Math.min(i-1, 0)]) i--;
+          return (i = i == 3 ? 0 : i, i)
+        }
+        function nearestBelow(x, a) {
+          for (var i = a.length - 1;
+               !(x < a[i--]) ; )
+            return i
+        }
+      } // fire the force_slow event when alpha reaches this value
+
+
+    fdg = (function() {
       var force = d3.layout.force()
             .size([width, height])
             .gravity(.2)
@@ -17,12 +33,14 @@ var familytree = (function() {
             .theta(0.9)
             .linkStrength(1)
             .distance(100)
-            .on("tick", tick),
+            .on("tick", tick)
+            .on("end", events.force_stop),
           fdg = {};
 
       svg = zoomableSVG({width: "100%", height: "100%"}, "#familytreecontentsvg", {extent: [0.4, 4], dblclk: null});
 
       function data(dataSet) {
+        if (!dataSet) return force.nodes().length ? {nodes: force.nodes(), links: force.links()} : null;
         force
           .nodes(dataSet.nodes)
           .links(dataSet.links)
@@ -99,7 +117,7 @@ var familytree = (function() {
           })
           .on('contextmenu', function(data, index) {
             d3.event.preventDefault();
-            familytree.events.node_contextmenu(data, index);
+            events.node_contextmenu(data, index);
           })
           .call(force.drag);
         newNode
@@ -148,8 +166,8 @@ var familytree = (function() {
           });
 
         force
-          .alpha(0.4)
-          .start();
+          .start()
+          //.alpha(0.4);
 
         function hookDrag(target, event, hook) {
           //hook force.drag behaviour
@@ -161,7 +179,7 @@ var familytree = (function() {
         }
 
         function zoomed() {
-          force.alpha(0.01);
+          if(force.alpha() < 0.01) force.alpha(0.01);
         }
 
         function imgHref(d) {
@@ -177,35 +195,38 @@ var familytree = (function() {
         d3.rebind(fdg, container, "attr");
 
         //  access the current transform state in zoom listener coordinates
-        d3.rebind(fdg, svg, "translate")
+        d3.rebind(fdg, svg, "translate");
 
-        var zoomTo = svg.zoomTo.bind(null, 1000);
-        fdg.zoomTime = (function() {
-          var _t;
-          return function(t) {
-            if(t == undefined) return _t;
-            if(t == null) return (zoomTo = svg.zoomTo, this);
-            zoomTo = svg.zoomTo.bind(null, _t = t);
-            return this;
-          }
-        })();
-        if(zt) fdg.zoomTime(zt);
-        fdg.zoomTo = (function() {
-          var _n;
-          return function(n) {
-            zoomTo(n || _n);
-            _n = n ? n : _n;
-          }
-        })();
+        events.graph_init();
 
         return this;
 
-      };
+      };  //data
+
+      var zoomTo = svg.zoomTo.bind(null, 1000);
+      fdg.zoomTo = (function() {
+        var _n;
+        return function(n) {
+          if(!n && ! _n) return false;
+          zoomTo(n || _n);
+          _n = n ? n : _n;
+        }
+      })();
+      fdg.zoomTime = (function() {
+        var _t;
+        return function(t) {
+          if(t == undefined) return _t;
+          if(t == null) return (zoomTo = svg.zoomTo, this);
+          zoomTo = svg.zoomTo.bind(null, _t = t);
+          return this;
+        }
+      })();
+
       fdg.focusNode = (function() {
         var _datum; // previous datum is stored as default
         return function(datum) {
           _datum = datum || _datum;
-          // closure on a reference to the node and transform state
+          // closure on a reference to the node and transition state
           var _n = node.filter(function(d) {
             return _datum === d;
           }), _trans, _t;
@@ -234,7 +255,7 @@ var familytree = (function() {
 
       return fdg;
 
-      function tick() {
+      function tick(e) {
         link
           .attr("x1", function(d) {
             return d.source.x;
@@ -252,9 +273,10 @@ var familytree = (function() {
           .attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
           });
+        if(e.alpha < slowAlpha) events.force_slow();
+        console.log(e.alpha);
       }
-
-    })(1000);
+    })().zoomTime(1000);
 
   function mouseover() {
     highlight(d3.select(this))
@@ -332,14 +354,19 @@ var familytree = (function() {
         "Werewolf"        : "#000"
       }[d.race] || "#aaa";
   }
-  return {
+
+  return d3.rebind.bind(fdg, {
     initializeGraph: fdg.data,
     zoomTo: function(){
-      fdg.zoomTo()
+      fdg.zoomTo.apply(this, arguments)
     },
     focusNode: fdg.focusNode,
     events         : events,
-  };
+    data: function() {
+      return fdg.data();
+    }
+  }, events, "on").apply(fdg, events);
+
   function zoomableSVG(size, selector, z) {
     //delivers an svg background with zoom/drag context in the selector element
     //if height or width is NaN, assume it is percentage and ignore margin
