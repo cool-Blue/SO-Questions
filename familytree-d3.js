@@ -8,7 +8,7 @@ var familytree = (function() {
       markerEnds = d3.range(1, 9).reduce(function(m, d) {
         return (m[d] = "url(#end" + d + ")", m)
       }, {}),
-    fdg = (function() {
+    fdg = (function(zt) {
       var force = d3.layout.force()
             .size([width, height])
             .gravity(.2)
@@ -179,27 +179,28 @@ var familytree = (function() {
         //  access the current transform state in zoom listener coordinates
         d3.rebind(fdg, svg, "translate")
 
+        var zoomTo = svg.zoomTo.bind(null, 1000);
+        fdg.zoomTime = (function() {
+          var _t;
+          return function(t) {
+            if(t == undefined) return _t;
+            if(t == null) return (zoomTo = svg.zoomTo, this);
+            zoomTo = svg.zoomTo.bind(null, _t = t);
+            return this;
+          }
+        })();
+        if(zt) fdg.zoomTime(zt);
+        fdg.zoomTo = (function() {
+          var _n;
+          return function(n) {
+            zoomTo(n || _n);
+            _n = n ? n : _n;
+          }
+        })();
+
         return this;
 
       };
-      var zoomTo = svg.zoomTo.bind(null, 1000);
-      //d3.rebind(fdg, svg, "zoomTo");
-      fdg.zoomTo = (function() {
-        var _n;
-        return function(n) {
-          zoomTo(n || _n);
-          _n = n ? n : _n;
-        }
-      })();
-      fdg.zoomTime = (function() {
-        var _t;
-        return function(t) {
-          if(t == undefined) return _t;
-          if(t == null) return (zoomTo = svg.zoomTo, this);
-          zoomTo = svg.zoomTo.bind(null, _t = t);
-          return this;
-        }
-      })();
       fdg.focusNode = (function() {
         var _datum; // previous datum is stored as default
         return function(datum) {
@@ -253,7 +254,7 @@ var familytree = (function() {
           });
       }
 
-    })().zoomTime(1000);
+    })(1000);
 
   function mouseover() {
     highlight(d3.select(this))
@@ -333,7 +334,9 @@ var familytree = (function() {
   }
   return {
     initializeGraph: fdg.data,
-    zoomTo: fdg.zoomTo,
+    zoomTo: function(){
+      fdg.zoomTo()
+    },
     focusNode: fdg.focusNode,
     events         : events,
   };

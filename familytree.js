@@ -94,7 +94,9 @@ var familytreeController = (function() {
   }
 
   infoState.events.on("widthChange", function(deltaW){
-    familytree.zoomTo();
-		familytree.focusNode().highlight().delay(2000).blur();
+    if(familytree.zoomTo) {
+      familytree.zoomTo();
+      familytree.focusNode().highlight().delay(2000).blur();
+    }
   })
 })();
