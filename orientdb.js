@@ -9,7 +9,7 @@ var orientdb = (function() {
 		function generateNodes() {
 			currentLinks = d3.map();
 			// connect links to existing nodes or generate new nodes based on links source and target
-			currentJSON.forEach(function(link, index) {
+			currentJSON.forEach(function(link) {
 				// new links will have strings for source and target, skip others
 				// A filtered version of currentNodes is passed to the force,
 				// so the original node data is retained in it's entirety

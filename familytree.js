@@ -1,6 +1,6 @@
 var familytreeController = (function() {
-  var familytreesearchsuggestions = "#familytreesearchsuggestions";
-  var familytreesearchsuggestionsFamilycreatures = "#familytreesearchsuggestionsFamilycreatures";
+  var suggestions = "#familytreesearchsuggestions";
+  var suggestionsFamily = "#familytreesearchsuggestionsFamilycreatures";
   var showAll;
   var zoomToTransition = 1000;
 
@@ -33,31 +33,30 @@ var familytreeController = (function() {
 
   $("#familytreesearch").on('input', function() {
     if($("#familytreesearch").val() == "") {
-      $(familytreesearchsuggestions).hide();
+      $(suggestions).hide();
     } else {
-      $(familytreesearchsuggestions).show();
-      orientdb.search4Creature("#familytreesearch", familytreesearchsuggestionsFamilycreatures);
+      $(suggestions).show();
+      orientdb.search4Creature("#familytreesearch", suggestionsFamily);
     }
   });
 
-  $("ul" + familytreesearchsuggestionsFamilycreatures).on('click', 'li', function() {
+  $("ul" + suggestionsFamily).on('click', 'li', function() {
     //if(showAll)  orientdb.clearAll();
     var id = this.id.split("|")[0];
     orientdb.stageFamilytreeSingle(this.id, function() {
       var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id],
-        stages = "force_stage.center", stopEvent = "force_stop.center";
+        stages = "force_stage", stopEvent = "force_stop",
+        eventID = Date.now();
       if(n) {
         orientdb.getInfo4CreatureByRID(id);
         familytree.focusNode(n).highlight();
-        //familytree.zoomTo(n);
-        familytree.on(stages, function(){
+        familytree.on([stages, eventID].join("."), function(){
           familytree.zoomTo(n);
+        });
+        familytree.on([stopEvent, eventID].join("."), function() {
           familytree.focusNode(n).highlight().delay(2000).blur();
-
-        })
-        familytree.on(stopEvent, function() {
-          familytree.on(".center", null);
-          console.log(familytree.on(stopEvent))
+          familytree.on("." + eventID, null);
+          console.log(familytree.on([stopEvent, eventID].join(".")))
         })
       }
     });
@@ -82,7 +81,7 @@ var familytreeController = (function() {
     orientdb.deleteCreatureByRID(clickedNode, familytree.initializeGraph);
   });
 
-  $("ul" + familytreesearchsuggestionsFamilycreatures).on('mouseenter mouseleave', 'li', function() {
+  $("ul" + suggestionsFamily).on('mouseenter mouseleave', 'li', function() {
     $(this).toggleClass("highlight");
   });
 
