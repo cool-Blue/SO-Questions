@@ -11,7 +11,7 @@ var familytreeController = (function() {
     $("#familytree").hide();
     $("#familytreecontent").children().hide();
     $("#illustrator").css("z-index", "19");
-    infoState.events.on("widthChange", null);
+    infoState.on("widthChange", null);
   });
 
   $("#familytreeShowallbutton").click(function() {
@@ -45,15 +45,19 @@ var familytreeController = (function() {
     var id = this.id.split("|")[0];
     orientdb.stageFamilytreeSingle(this.id, function() {
       var n = this.mergeSingle().dataSet(familytree.initializeGraph).nodes[id],
-        shutDown = "force_slow";
+        stages = "force_stage.center", stopEvent = "force_stop.center";
       if(n) {
         orientdb.getInfo4CreatureByRID(id);
         familytree.focusNode(n).highlight();
-        familytree.zoomTo(n);
-        familytree.on(shutDown, function(){
+        //familytree.zoomTo(n);
+        familytree.on(stages, function(){
           familytree.zoomTo(n);
           familytree.focusNode(n).highlight().delay(2000).blur();
-          familytree.on(shutDown, null);
+
+        })
+        familytree.on(stopEvent, function() {
+          familytree.on(".center", null);
+          console.log(familytree.on(stopEvent))
         })
       }
     });

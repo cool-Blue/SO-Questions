@@ -3,25 +3,21 @@ var familytree = (function() {
   var zoom;
   var width = 1200, height = 900;
   var container;
-  var eventNames = ["node_click", "node_dblclick", "node_contextmenu", "graph_init", "force_slow", "force_stop"],
+  var eventNames = ["node_click", "node_dblclick", "node_contextmenu", "graph_init", "force_stage", "force_stop"],
       events     = d3.dispatch.apply(null, eventNames),
       markerEnds = d3.range(1, 9).reduce(function(m, d) {
         return (m[d] = "url(#end" + d + ")", m)
       }, {}),
-      slowAlpha = 0.08,
-      phasesAlpha = function(){
-        // todo
+      phasesAlpha = (function(){
         var p = [0.08, 0.04, 0.02, 0],i = 0;
-        return function(alpha){
-          if(aplha < (p[i])) i++; else if(alpha > p[Math.min(i-1, 0)]) i--;
-          return (i = i == 3 ? 0 : i, i)
-        }
-        function nearestBelow(x, a) {
-          for (var i = a.length - 1;
-               !(x < a[i--]) ; )
-            return i
-        }
-      } // fire the force_slow event when alpha reaches this value
+        return function (alpha){
+          // resets if alpha is falsey or > p[0]
+          i = alpha ? (alpha > p[0] ? 0 : i) : 0;
+          var i0 = i;
+          if(alpha < (p[i])) i++;
+          return i != i0;
+        };
+      })(), // fire the force_stage event when alpha reaches each value
 
 
     fdg = (function() {
@@ -273,10 +269,10 @@ var familytree = (function() {
           .attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
           });
-        if(e.alpha < slowAlpha) events.force_slow();
-        console.log(e.alpha);
+        if(phasesAlpha(e.alpha)) events.force_stage(e.alpha);
       }
     })().zoomTime(1000);
+  events.on("force_stage.debug", function(a){console.log(a)});
 
   function mouseover() {
     highlight(d3.select(this))
