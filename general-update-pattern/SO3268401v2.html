@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        .enter {
+            fill: green
+        }
+        .exit {
+            fill: red
+        }
+        .update {
+            fill: black
+        }
+    </style>
+</head>
+<body>
+
+</body>
+</html>
+<svg id='wordcloud'></svg>
+<div id="output-log"></div>
+<div id="transition-log"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.4.11/d3.min.js"></script>
+<script>
+    var width = 600;
+    var height = 200;
+    var words = ["Hello", "world", "Wonderful"];
+    var when=2000;
+    var step=1;
+    //this function sets the data and passes the update object
+    //  to exit, update and enter
+    function change(data){
+        var update =   d3.select('#wccontainer')
+            .selectAll('text')
+            .data(data);
+        exitWords(update);
+        updateWords(update);
+        enterWords(update);
+    }
+    //existing items move to the right
+    function updateWords(update){
+        update
+            //this is an existing item, no need for append
+            .text(function(d) { return d; })
+            .classed(setClass("update"))
+            .transition()
+            .duration(when-100)
+            .attr("transform", function(d,i) {
+                this.left=this.left+25;
+                return "translate(" + [this.left, 20*i] + ")";
+            })
+            .style('opacity',1);
+    }
+    //new items fade in
+    function enterWords(update){
+        update
+            .enter()
+            .append("text")
+            .classed(setClass("enter"))
+            .attr("transform", function(d,i) {
+                this.left=0;
+                return "translate(" + [5, 20*i] + ")";
+            })
+            .text(function(d) { return d; })
+            .style('opacity',0)
+            .transition()
+            .duration(when-100)
+            .attr("transform", function(d,i) {
+                return "translate(" + [5, 20*i] + ")";
+            })
+            .style('opacity',1);
+    }
+    //removed words fade out
+    function exitWords(update){
+        var removeItems = update
+            .exit()
+        removeItems
+            .classed(setClass("exit"))
+            .transition()
+            .duration(when-800)
+            .style('opacity',0)
+            .each('end',function(){
+                removeItems.remove();
+            });
+    }
+    function later(when,fn,parms){
+        setTimeout(function(){
+            fn.apply(null,parms);
+        },when);
+    }
+    function setClass(cl){
+        return ["enter", "exit", "update"].reduce(function(o, d){return (o[d] = d==cl,o)},{})
+    }
+    //create the g container and set svg width/height
+    d3.select("#wordcloud")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr('id','wccontainer')
+        .attr("transform", "translate(" + width / 2
+        + "," + height / 2 + ")")
+    //set the text labels
+    change(words);
+    //in 1000ms (value of when) set the text lables with changed data
+    later(when,change,[words.slice(0,2)]);
+    //in 2000ms  set the text lables with changed data
+    later(when*++step,change,[["CHANGED"]
+                                  .concat(words.slice(1,2))
+                                  .concat(["ONE","TWO","THREE","FOUR"])]);
+    //in 3000ms  set the text lables with the original values
+    later(when*++step,change,[words]);
+</script>

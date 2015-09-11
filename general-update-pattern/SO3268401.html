@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        .enter {
+            fill: green
+        }
+        .exit {
+            fill: red
+        }
+        .update {
+            fill: black
+        }
+    </style>
+</head>
+</html>
+<svg id='wordcloud'></svg>
+<div id="output-log"></div>
+<div id="transition-log"></div>
+<div id="log"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="UTF-8"></script>
+<script src="https://rawgit.com/cool-Blue/d3-lib/master/Output/log/log.js"></script>
+<script>
+    window.onload = function() {
+        var width = 70, height = 100;
+        var words = ["Hello", "world", "Wonderful"];
+        var outputLog = d3.ui.log("#output-log");
+        var transitionLog = d3.ui.log("#transition-log");
+
+        var wcwords = d3.select("#wordcloud").style("display", "inline-block")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .style("font-size", "10px")
+            .attr("transform", "translate(" + 10 + "," + 20 + ")")
+            .selectAll("text")
+            .data(words)
+            .enter()
+            .append("text")
+            .style("opacity", 0);
+
+        wcwords
+            .text(function(d) { return d; })
+            .attr("transform", function(d,i) {
+                return "translate(" + [5, 20*i] + ")";
+            })
+            .call(step, 0, "in")
+            .call(log, "wcwords.data(words) enter");
+
+        // bind a new data set to the selection and return the update selection
+        var wcwords = wcwords.data(words.slice(0,2))
+            .call(log, "wcwords.data(words.slice(0,2)) update");
+
+        // merge the enter selection into the update selection and update the DOM
+        wcwords.enter()
+            .append("text")
+            .style("opacity", 0);
+        wcwords.exit().transition().call(step, 1, "out").remove()
+            .call(log, "exit");
+
+        // modify the selection by rebinding the original data
+        // but with an extra element concatenated
+        // and return the update selection
+        var wcwords = wcwords.data(words.concat(["No"]))
+            .call(log, "wcwords.data(words.concat(['No'])) update");
+
+        // update the DOM and merge the exit selection into the update selection
+        wcwords.enter().append('text')
+            .attr("transform", function(d,i) {
+                return "translate(" + [5, 20*i] + ")";
+            })
+            .text(function(d) { return d; })
+            .style("opacity", 0)
+            .call(step, 2, "in")
+            .call(log, "enter");
+
+        function datum(n){
+            return n ? d3.select(n).datum() : "";
+        }
+        function step (selection, s, type) {
+            var id = Date.now(),
+                opacity = {in: 1, out: 0},
+                t = 1000,
+                w = 0, b = "";
+            selection.each(function(d){w = Math.max(w, d.length) });
+            b = new Array(w+4).join('_')
+            this.transition(Date.now()).delay(s * t).duration(t)
+                .each("start." + id, function(d, i, j){
+                    var n = this, node = d3.select(n),
+                        DOM_node = d3.select(selection[0].parentNode)
+                            .selectAll(this.nodeName).filter(function(d){return node.datum() === d});
+                    DOM_node = DOM_node.length ? DOM_node[0][0] : null;
+                    transitionLog.writeLine(["start ", (""+id).slice(-4), s, type, (d+b).slice(0,w), style(this, "opacity") || "null", DOM_node === n].join("\t"))
+                })
+                .each("interrupt." + id, function(d){
+                    console.log(["\tinterrupt ", id, type, style(this, "opacity"), s].join("\t"))
+                })
+                .each("end." + id, function(d){
+                    var n = this, node = d3.select(n),
+                        DOM_node = d3.select(selection[0].parentNode)
+                            .selectAll(this.nodeName).filter(function(d){return node.datum() === d});
+                    DOM_node = DOM_node.length ? DOM_node[0][0] : null;
+                    transitionLog.writeLine(["end", (""+id).slice(-4), s, type, (d+b).slice(0,w), style(this, "opacity") || "null", DOM_node === n].join("\t"))
+                })
+                .style("opacity", opacity[type]);
+            function style(n, a){return d3.select(n).style(a)}
+        }
+
+        function log(selection, title){
+            outputLog.writeLine(title);
+            outputLog.writeLine(this[0].map(datum), 1);
+        }
+
+    }
+    d3.transition.prototype.classed = function(){
+        var args = arguments;
+        this.each(function(){
+            var selection = d3.select(this)
+                selection.classed.apply(selection, args)
+        })
+        return this;
+    }
+
+
+</script>
+<body>
+
+</body>
