@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body{margin:0;}
+    </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+
+<script>
+    d3.csv("data.csv",function(data){
+        var size = {width: 500, height: 180},
+            svg = d3.select("body").append("svg").attr(size),
+            x = d3.time.scale()
+                .domain(["04/23/12", "04/26/12"].map(function(d){
+                    return new Date(d)
+                }))
+                .range([0,size.width]),
+            y = d3.scale.linear()
+                .range([size.height, 0]),
+            r = d3.scale.linear()
+                .range([0, size.height]),
+            color = d3.scale.category10();
+
+        data.forEach(function(d){
+            d.date = new Date(d.date);
+            d.value = +d.value
+        });
+
+        var stack = d3.layout.stack()
+            .offset("wiggle")
+            .order("inside-out")
+            .values(function(d) { return d.values; })
+            .x(function(d) {
+                return d.date;
+            })
+            .y(function(d) {
+                return +d.value;
+            });
+
+        var nest = d3.nest()
+            .key(function(d) { return d.key; });
+
+        var layers = stack(nest.entries(data));
+
+        var monthHeights = layers.map(function(g){return d3.max(g.values, function(d){return d.y0 + d.y} )}),
+            maxMonth = d3.max(monthHeights);
+        y.domain([0, maxMonth]);
+        r.domain(y.domain());
+        x.range(x.range().map(function(d, i){return d + [maxMonth/2, -maxMonth/2][i]}));
+        color.domain(layers.map(function(o){return o.key}));
+
+        var layerGroups = svg.selectAll("circles")
+            .data(layers)
+            .enter().append('g')
+            .attr("class", "layer"),
+            circles = layerGroups.selectAll("circle")
+                .data(function(d){
+                    return d.values
+                })
+                .enter().append("ellipse")
+                .attr({
+                    'cx': function (d, i) {
+                        return x(d.date);
+                    },
+                    'cy': function (d, i) {
+                        return y(d.y0 + d.y/2);
+                    },
+                    'ry': function (d, i) {
+                        return r(d.value/2);
+                    },
+                    'rx': function (d, i) {
+                        return r(d.value/4);
+                    },
+                    "fill": function(d){
+                        return color(d.key)
+                    }
+                }),
+            areas = d3.svg.area()
+                .x(function(d){
+                    return x(d.date)
+                })
+                .y0(function(d){
+                    return y(d.y0)
+                })
+                .y1(function(d){
+                    return y(d.y0 + d.y)
+                })
+                .interpolate("cardinal")
+            ,
+            bands = layerGroups.selectAll("path")
+                .data(function(d){
+                    return [d.values]
+                })
+                .enter().append("path")
+                .attr({
+                    "d": function(d) {
+                        return areas(d)
+                    },
+                    opacity: 0.5,
+                    stroke: function(d){
+                        return color(d[0].key)
+                    },
+//                    "stroke-width": 6,
+                    fill: function(d){
+                        return color(d[0].key)
+                    }
+                })
+
+
+
+    })
+</script>
+</body>
+</html>
