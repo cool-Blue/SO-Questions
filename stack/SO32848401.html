@@ -5,15 +5,38 @@
     <title></title>
     <style>
         body{margin:0;}
+        svg{outline:solid 1px #ccc}
     </style>
 </head>
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.1.2/tinycolor.min.js"></script>
+<script src="https://gitcdn.xyz/repo/cool-Blue/d3-lib/master/filters/shadow.js"></script>
 
 <script>
     d3.csv("data.csv",function(data){
         var size = {width: 500, height: 180},
-            svg = d3.select("body").append("svg").attr(size),
+            light = [0,1,1,0],
+            svg = d3.select("body").append("svg").attr(size)
+                .on("mousemove", function() {
+                    var m1 = d3.mouse(svg.node()).map(function(d, i){
+                        var side = [size.width, size.height][i];
+                            return d / side
+                        }),
+                        m2 = [1 - m1[0], 1 - m1[1]];
+                    if(m1[0]<0) {
+                        var p = m1;
+                        m1[0] = -m2[0];
+                        m2[0] = -p[0]
+                    }
+                    if(m1[1]<0) {
+                        var p = m1;
+                        m1[1] = -m2[1];
+                        m2[1] = -p[1]
+                    }
+                        cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, [m1[0],m1[1],m2[0],m2[1]])));
+                    console.log([m1[0],m1[1],m2[0],m2[1]])
+                }),
             x = d3.time.scale()
                 .domain(["04/23/12", "04/26/12"].map(function(d){
                     return new Date(d)
@@ -23,7 +46,8 @@
                 .range([size.height, 0]),
             r = d3.scale.linear()
                 .range([0, size.height]),
-            color = d3.scale.category10();
+            cat10 = d3.scale.category10(),
+            color = cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, [0,0,1,1])));
 
         data.forEach(function(d){
             d.date = new Date(d.date);
@@ -56,13 +80,43 @@
         var layerGroups = svg.selectAll("circles")
             .data(layers)
             .enter().append('g')
-            .attr("class", "layer"),
-            circles = layerGroups.selectAll("circle")
+            .attr({"class": "layer", "mix-blend-mode": "normal"}),
+            areas = d3.svg.area()
+                .x(function(d){
+                    return x(d.date)
+                })
+                .y0(function(d){
+                    return y(d.y0)
+                })
+                .y1(function(d){
+                    return y(d.y0 + d.y)
+                })
+                .interpolate("cardinal"),
+            bands = layerGroups.selectAll("path")
+                .data(function(d){
+                    return [d.values]
+                })
+                .enter().append("path")
+                .attr({
+                    "d": function(d) {
+                        return areas(d)
+                    },
+                    opacity: 0.5,
+                    stroke: function(d){
+                        return color(d[0].key)
+                    },
+                    //                    "stroke-width": 6,
+                    fill: function(d){
+                        return color(d[0].key)
+                    }
+                }),
+            circles = layerGroups.selectAll(".circle")
                 .data(function(d){
                     return d.values
                 })
                 .enter().append("ellipse")
                 .attr({
+                    class: "circle",
                     'cx': function (d, i) {
                         return x(d.date);
                     },
@@ -77,40 +131,9 @@
                     },
                     "fill": function(d){
                         return color(d.key)
-                    }
-                }),
-            areas = d3.svg.area()
-                .x(function(d){
-                    return x(d.date)
-                })
-                .y0(function(d){
-                    return y(d.y0)
-                })
-                .y1(function(d){
-                    return y(d.y0 + d.y)
-                })
-                .interpolate("cardinal")
-            ,
-            bands = layerGroups.selectAll("path")
-                .data(function(d){
-                    return [d.values]
-                })
-                .enter().append("path")
-                .attr({
-                    "d": function(d) {
-                        return areas(d)
                     },
-                    opacity: 0.5,
-                    stroke: function(d){
-                        return color(d[0].key)
-                    },
-//                    "stroke-width": 6,
-                    fill: function(d){
-                        return color(d[0].key)
-                    }
+//                    "mix-blend-mode": "normal"
                 })
-
-
 
     })
 </script>
