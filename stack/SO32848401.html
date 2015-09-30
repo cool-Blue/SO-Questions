@@ -19,23 +19,15 @@
             light = [0,1,1,0],
             svg = d3.select("body").append("svg").attr(size)
                 .on("mousemove", function() {
-                    var m1 = d3.mouse(svg.node()).map(function(d, i){
-                        var side = [size.width, size.height][i];
+                    var m = d3.mouse(svg.node()).map(function(d, i){
+                            var side = [size.width, size.height][i];
                             return d / side
                         }),
-                        m2 = [1 - m1[0], 1 - m1[1]];
-                    if(m1[0]<0) {
-                        var p = m1;
-                        m1[0] = -m2[0];
-                        m2[0] = -p[0]
-                    }
-                    if(m1[1]<0) {
-                        var p = m1;
-                        m1[1] = -m2[1];
-                        m2[1] = -p[1]
-                    }
+                        m1 = m.map(Math.round),
+                        m2 = [(m[0] % 0.5)*2, (m[1] % 0.5)*2];
                         cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, [m1[0],m1[1],m2[0],m2[1]])));
-                    console.log([m1[0],m1[1],m2[0],m2[1]])
+                    console.log([m.map(f), [m1[0],m2[0]].map(f),[m1[1],m2[1]].map(f)].join("\t"))
+                    function f(x){return d3.format(" >6.3f")(x)}
                 }),
             x = d3.time.scale()
                 .domain(["04/23/12", "04/26/12"].map(function(d){
