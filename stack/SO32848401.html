@@ -7,6 +7,7 @@
         body{margin:0; position: relative}
         svg{outline:solid 1px #ccc;
             overflow: visible;
+            margin: 10px;
         }
         #tool-tip{
             position: absolute;
@@ -14,7 +15,7 @@
             pointer-events: none;
             white-space: pre;
             background-color: #ccc;
-            transparency: 0.8;
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -27,6 +28,12 @@
     d3.csv("https://rawgit.com/cool-Blue/SO-Questions/master/stack/data.csv",function(data){
         var size = {width: 500, height: 180},
             light = [0,1,1,0],
+            drag = d3.behavior.drag()
+                .on("dragstart", function(){
+
+                })
+                .on("drag", function(){})
+                .on("dragend", function(){})
             svg = d3.select("body").append("svg").attr(size)
                 .on("click", function() {
                     var m = d3.mouse(svg.node()).map(function(d, i){
@@ -34,9 +41,10 @@
                             return d / side
                         }),
                         m1 = m.map(Math.round),
-                        m2 = [(m[0] % 0.5)*2, (m[1] % 0.5)*2],
+                        m2 = [(mNorm[0] % 0.5)*2, (mNorm[1] % 0.5)*2],
                         f3 = F(" >6.3f"), f0 = F(" >6.0f");
-                        cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, [m1[0],m1[1],m2[0],m2[1]])));
+                        cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, (light = [m1[0],m1[1],m2[0],m2[1]]))));
+                    updateShadePath();
                     console.log([m.map(f0), [m1[0],m2[0]].map(f3),[m1[1],m2[1]].map(f3)].join("\t"))
                 })
             .on("mousemove", function() {
@@ -45,16 +53,18 @@
                             var side = [size.width, size.height][i];
                             return d / side
                         }),
-                        m1 = mNorm.map(Math.round),
-                        m2 = [(mNorm[0] % 0.5) * 2, (mNorm[1] % 0.5) * 2],
+                        p1 = mNorm,
+                        p2 = [(mNorm[0] % 0.5)*2, (mNorm[1] % 0.5)*2],
                         f3 = F(" >6.3f"), f0 = F(" >6.0f");
+                    cat10.copy().range(cat10.range().map(filters.FlatShade.bind(null, svg, (light = [p1[0],p1[1],p2[0],p2[1]]))));
+                    updateShadePath();
                     tooltip
                         .style({
-                            top: m[1] + 10 + "px",
-                            left: m[0] + 20 + "px",
+                            top: size.height + 10 + "px",//m[1] + 10 + "px",
+                            left: 10 + "px", //m[0] + 20 + "px",
                             display: "inline-block"
                         })
-                        .text([m.map(f0), mNorm.map(f3), [" p1", " p2"].join("      "), [m1[0], m2[0]].map(f3), [m1[1], m2[1]].map(f3)].join("\n"))
+                        .text([m.map(f0), mNorm.map(f3), [" p1", " p2"].join("      "), [p1[0], p2[0]].map(f3), [p1[1], p2[1]].map(f3)].join("\n"))
                 })
                 .on("mouseout", function(){tooltip.style("display", "none")}),
             x = d3.time.scale()
@@ -162,29 +172,37 @@
                 .each(function(d){
                     var n = this;
                     d.bb = function(){return n.getBBox()}
-                }),
-            shadePath = layerGroups.selectAll("path")
-                .data(function(d){
-                    return d.values
-                })
-                .enter().append("path")
-                .attr({
-                    class: "arrow",
-                    d: function(d) {
-                        var bb = d.bb(),
-                            p1 = [light[0] * bb.width + bb.x, light[1] * bb.height + bb.y],
-                            p2 = [light[2] * bb.width + bb.x, light[3] * bb.height + bb.y]
-                        return d3.svg.line()([p1, p2])
-                    },
-                    stroke: "red"
-                }).style({
-                    "marker-start": markers.start,
-                    "marker-end": markers.end
                 });
+        function updateShadePath(){
+
+            var  shadePath = layerGroups.selectAll(".arrow")
+                    .data(function(d){
+                        return d.values
+                    });
+            shadePath.enter().append("path");
+            shadePath.attr({
+                        class: "arrow",
+                        d: function(d) {
+                            var bb = d.bb(),
+                                p1 = [light[0] * bb.width + bb.x, light[1] * bb.height + bb.y],
+                                p2 = [light[2] * bb.width + bb.x, light[3] * bb.height + bb.y]
+                            return d3.svg.line()([p1, p2])
+                        },
+                        stroke: "red"
+                    }).style({
+                        "marker-start": markers.start,
+                        "marker-end": markers.end
+                    });
+        }
+        updateShadePath();
         var F = function(fmt){
             return function f(x) {return d3.format(fmt)(x)}
         }
-
+        function mNorm(ref){
+            return d3.mouse(ref).map(function(d, i){
+                var side = [size.width, size.height][i];
+                return d / side
+            })        }
     })
 </script>
 </body>
