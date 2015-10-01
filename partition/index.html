@@ -3,21 +3,22 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
     <title>http://stackoverflow.com/questions/32876675/d3-cant-edit-children-css?noredirect=1#comment53610846_32876675</title>
-    <link type="text/css" rel="stylesheet" href="style.css"/>
+    <link type="text/css" rel="stylesheet" href="https://rawgit.com/cool-Blue/SO-Questions/master/partition/style.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
     <style type="text/css">
 
+        body {margin: 0;}
         .chart {
             display: block;
             margin: auto;
-            margin-top: 60px;
+            margin-top: 0;
             font-size: 11px;
         }
 
         rect {
             stroke: #eee;
             fill: #aaa;
-            fill-opacity: .8;
+            fill-opacity: .3;
         }
 
         rect.parent {
@@ -28,27 +29,28 @@
         text {
             pointer-events: none;
         }
-        .highlighted {
-            outline: 1px solid red;
+        .highlighted rect {
+            /*outline: 1px solid red;*/
+            fill-opacity: 1;
         }
 
     </style>
 </head>
 <body>
-<div id="body">
-    <div id="footer">
-        d3.layout.partition
-        <div class="hint">click or option-click to descend or ascend</div>
-    </div>
-</div>
+<!--<div id="body">-->
+    <!--<div id="footer">-->
+        <!--d3.layout.partition-->
+        <!--<div class="hint">click or option-click to descend or ascend</div>-->
+    <!--</div>-->
+<!--</div>-->
 <script type="text/javascript">
 
-    var w = 1120,
-        h = 600,
+    var w = /*600, //*/1120,
+        h = /*200, //*/600,
         x = d3.scale.linear().range([0, w]),
         y = d3.scale.linear().range([0, h]);
 
-    var vis = d3.select("#body").append("div")
+    var vis = d3.select("body").append("div")
         .attr("class", "chart")
         .style("width", w + "px")
         .style("height", h + "px")
@@ -59,13 +61,14 @@
     var partition = d3.layout.partition()
         .value(function(d) { return d.size; });
 
-    d3.json("flare.json", function(root) {
+    d3.json("https://rawgit.com/cool-Blue/SO-Questions/master/partition/flare.json", function(root) {
         var g = vis.selectAll("g")
             .data(partition.nodes(root))
             .enter().append("svg:g")
             .attr("transform", function(d) { return "translate(" + x(d.y) + "," + y(d.x) + ")"; })
             .on("click", click)
-            .on("mouseover", hover);
+            .on("mouseover", hover)
+            .on("mouseout", function(){g.classed("highlighted", false)});
 
         var kx = w / root.dx,
             ky = h / 1;
@@ -113,7 +116,7 @@
             var x0 = dActive.x, y0 = dActive.y,
                 x1 = x0 + dActive.dx, y1 = dActive.dy;
             g.classed("highlighted", function(d){
-                return d.y > y0 && (d.x >= x0 && d.x < x1)
+                return (d.y > y0) && (d.x >= x0) && (d.x < x1)
             })
         }
 
