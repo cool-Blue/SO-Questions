@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title></title>
     <style>
-        body {margin: 0;}
+        body {
+            margin: 0;
+        }
         .link {
             stroke: #000;
             stroke-width: 1.5px;
@@ -20,11 +22,22 @@
         .node.fixed {
             fill: #f00;
         }
+        button, input {display: inline-block}
+        .input-div {
+            position: absolute;
+            top: 0;
+            left: 0;
+            /*white-space: pre;*/
+            margin: 0;
+        }
     </style>
 </head>
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-<button onclick = 'positionnodes()'> click me</button>
+<div class="input-div">
+    <button onclick = 'positionnodes()'> select the nodes to include then click me</button>
+    steps <input id="steps-selector" onchange = 'positionnodes()' type="number"  name="steps" value = 3 min="1" max="100"/>
+</div>
 <script>
     var graph  ={
         "nodes": [
@@ -64,12 +77,9 @@
         ]
     }
 
-
-
-
-
     var width = 500,
-        height = 200;
+        height = 190,
+        steps = function(){return +d3.select("#steps-selector").property("value")};
 
     var force = d3.layout.force()
         .size([width, height])
@@ -129,44 +139,50 @@
 
     function positionnodes(){
         var ns = "CB:emit/drag/transition/or-whatever-you-feel-like",
-            shadowNode = d3.select("body").selectAll("emitDrag").data([1]),
-            shadowedData = graph.nodes[1];
-        shadowNode.enter().append(function(){return document.createElementNS(ns, "emitDrag")}),
+            shadowNodes = d3.select("body").selectAll("emitDrag")
+                .data(graph.nodes.filter(function(d){return d.fixed})),
+            shadowedData = [];
+        shadowNodes.enter().append(function(){return document.createElementNS(ns, "emitDrag")});
 
-        node.each(function(d, i){
-            if(i===1){
-                dragstart.call(this, d, i);
-            }
-        });
+        shadowNodes.each(function(d, i){
+            var n = d3.select(this);
+            shadowedData[i] = d;
+            dragstart.call(node.filter(function(s){return s === d;}).node(), d);
 
-        shadowedData.fixed = true;
-        shadowNode.attr({cx: shadowedData.x, cy: shadowedData.y});
+            d.fixed = true;
+            n.attr({cx: d.x, cy: d.y});
 
-        Object.defineProperties(shadowedData, {
-            x: {
-                get: function() {return shadowedData.px = +shadowNode.attr("cx")},
-                configurable: true
-
-            },
-            y: {
-                get: function() {return shadowedData.py = +shadowNode.attr("cy")},
-                configurable: true
-            }
+            Object.defineProperties(d, {
+                px: {
+                    get: function() {return +n.attr("cx")},
+                    configurable: true
+                },
+                py: {
+                    get: function() {return +n.attr("cy")},
+                    configurable: true
+                }
+            });
         });
 
         force.start();
 
-        shadowNode
-            .transition().duration(1000).ease("cubic")
-            .attr({cx: (1+3*Math.random())*width*0.2, cy: (1+3*Math.random())*height*0.2})
-            .each("end", function(){
+        d3.range(steps()).reduce(function(o, s){
+            return o.transition().duration(750).ease("cubic")
+                    .attr({
+                        cx: function(){return (1+3*Math.random())*width*0.2},
+                        cy: function(){return (1+3*Math.random())*height*0.2}
+                    })
+        },shadowNodes)
+
+            .each("end", function(d, i){
                 var n = d3.select(this);
-                Object.defineProperties(shadowedData, {
-                    x: {value: +n.attr("cx"), writable: true},
-                    y: {value: +n.attr("cy"), writable: true}
+                Object.defineProperties(shadowedData[i], {
+                    px: {value: +n.attr("cx"), writable: true},
+                    py: {value: +n.attr("cy"), writable: true}
                 });
             });
     }
+
 </script>
 </body>
 </html>
