@@ -8,6 +8,12 @@
             margin: 0;
             position: relative;
         }
+        #vis {
+            background: steelblue;
+        }
+        text {
+            white-space: pre;
+        }
         .link {
             stroke: #000;
             stroke-width: 1.5px;
@@ -37,10 +43,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 <script src="https://rawgit.com/cool-Blue/d3-lib/master/transitions/end-all/1.0.0/endAll.js" charset="UTF-8"></script>
 <script src="https://rawgit.com/cool-Blue/d3-lib/master/inputs/select/select.js" charset="UTF-8"></script>
+<script src="https://rawgit.com/cool-Blue/d3-lib/master/tool-tip/0.0.0/tool-tip.js" charset="UTF-8"></script>
+<script src="https://rawgit.com/cool-Blue/d3-lib/master/inputs/number/input-number.js" charset="UTF-8"></script>
 <div id="input-div">
     <button onclick = 'positionnodes()'> select the nodes to include then click me</button>
     steps <input id="steps-selector" onchange = 'positionnodes()' type="number"  name="steps" value = 10 min="1" max="100"/>
 </div>
+<div id="vis"></div>
 <script>
     var graph  ={
         "nodes": [
@@ -78,49 +87,26 @@
             {"source": 11, "target": 12},
             {"source": 12, "target": 10}
         ]
-    }
+    };
 
-    var width = 500,
-        height = 190,
+    var width = 960,
+        height = 500,
         steps = function(){return +d3.select("#steps-selector").property("value")};
 
     var inputDiv = d3.select("#input-div"),
-        tooltip = (function tooTip() {
-            var tt = d3.select("body").append("div")
-                .attr("id", "tool-tip")
-                .style({
-                    position: "absolute",
-                    color: "black",
-                    background: "rgba(0,0,0,0)",
-                    display: "none"
-                });
-            return function(message) {
-                return message ?
-                       function() {
-                           var rect = this.getBoundingClientRect();
-                           tt
-                               .style({
-                                   top: (rect.bottom + 6) + "px",
-                                   left: (rect.right + rect.left) / 2 + "px",
-                                   width: "10px",
-                                   padding: "0 1em 0 1em",
-                                   background: "#ccc",
-                                   'border-radius': "2px",
-                                   display: "inline-block"
-                               })
-                               .text(message)
-                       }:
-                       function() {
-                           tt
-                               .style({
-                                   display: "none"
-                               })
-                       }
-            }
-        })(),
+        tooltip = d3.ui.tooltip({
+            base: "body",
+            offset: {
+                top: {ref: "bottom", offset: 6},
+                left: function(rect) {
+                    return (rect.right + rect.left) / 2;
+                }
+            },
+            style: {background: "#ccc", color: "red"}
+        }),
         easeings = ["linear", "quad", "cubic", "sin", "exp", "circle", "elastic", "back", "bounce"],
         xEase = d3.ui.select({
-            base: d3.select("#input-div"),
+            base: inputDiv,
             oninput: positionnodes,
             data: easeings,
             initial: "bounce",
@@ -128,49 +114,38 @@
             onmouseout: tooltip()
         }),
         yEase = d3.ui.select({
-            base: d3.select("#input-div"),
+            base: inputDiv,
             oninput: positionnodes,
             data: easeings,
             initial: "circle",
             onmouseover: tooltip("y"),
             onmouseout: tooltip()
         }),
-        t = (function(){
-            var s = d3.select("#input-div").selectAll(".time")
-                .data([{name: "tx", value: 0.75}, {name: "ty", value: 1.6}])
-                .enter().append("input")
-                .attr({
-                    id: function(d){return d.name + "-selector"},
-                    type: "number",
-                    name: function(d){return d.name},
-                    value: function(d){return d.value},
-                    min: "0.1", max: "5", step: 0.5
-                })
-                .on("change", positionnodes)
-                .each(function(d){
-                    d3.select(this).on("mouseover", tooltip(d.name))
-                })
-                .on("mouseout", tooltip());
-            return function(){
-                var values = [];
-                s.each(function(){
-                    values.push(d3.select(this).property("value") * 1000);
-                });
-                return  values;
+        t = d3.ui.number({
+            attributes: {
+                varying: [{name: "tx", value: 5}, {name: "ty", value: 5}],
+                uniform: {min: 0.5, max: 10, step: 0.5}
+            },
+            events: {
+                varying: {mouseover: function(v){return tooltip(v.name)}},
+                uniform: {
+                    change: positionnodes,
+                    mouseout: tooltip()
+                }
             }
-        })();
+        });
 
 
     var force = d3.layout.force()
         .size([width, height])
-        .charge(-100)
-        .linkDistance(6)
-        .on("tick", tick);
+        .charge(-400)
+        .linkDistance(40)
+    .on("tick", tick);
 
     var drag = force.drag()
         .on("dragstart", dragstart);
 
-    var svg = d3.select("body").append("svg")
+    var svg = d3.select("#vis").append("svg")
         .attr("width", width)
         .attr("height", height);
 
@@ -190,11 +165,18 @@
         .attr("class", "link");
 
     node = node.data(graph.nodes)
-        .enter().append("circle")
+        .enter().append("g")
         .attr("class", "node")
-        .attr("r", 6)
         .on("dblclick", dblclick)
-        .call(drag);
+        .call(drag),
+    circle = node.append("circle")
+        .attr("r", 12),
+    label = node.append("text")
+        .attr({
+            "text-anchor": "middle",
+            "font-size": "12px",
+            dy: "0.35em"
+        });
     //});
 
     function tick() {
@@ -203,8 +185,11 @@
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
 
-        node.attr("cx", function(d) { return d.x; })
-            .attr("cy", function(d) { return d.y; });
+        label.text(function(d){
+            return d.step;
+        });
+
+        node.attr("transform", function(d){return "translate(" + [d.x, d.y] + ")"})
         force.alpha(0.1)
     }
 
@@ -252,37 +237,59 @@
         });
 
         force.start();
-        d3.range(steps()).reduce(function(o){
-            return (o.transition("cx").duration(t()[0]).ease(xEase.value())
+        d3.range(steps()).reduce(function(o, s){
+            return (o.transition("cx" + Date.now())
+                .duration(function(d){return d.duration = Math.random() * t()[0]})
+//                .delay(function(d){return d.delay = Math.random() * t()[0]})
+                .ease(xEase.value())
                 .attr({
-                    cx: function(d){
-//                        return d.x + (Math.random() - 0.5) * width/5
-                        return (1+3*Math.random())*width*0.2
+                    cx: function(d) {
+                        if(!d.step) d.step = new Array(2);
+                        d.step[0] = s+1;
+                        return (1 + 3 * Math.random()) * width * 0.2
                     }
-                }))
+                })
+                .each("interrupt.step", function(d, i){
+                    console.log(i + " interrupted x at " + d.step[0]);
+                    d.step[0] -= 1
+                })
+                .each("end.step", function(d){d.step[0] -= 1}))
         },shadowNodes)
 
+            // add a cleanup on the last transition in the chain
             .call(cleanUp, "px", "cx");
 
-        d3.range(steps()).reduce(function(o){
-            return (o.transition("cy").duration(t()[1]).ease(yEase.value())
+        d3.range(steps()).reduce(function(o, s){
+            return (o.transition("cy" + Date.now())
+                .duration(function(d){return d.duration = Math.random() * t()[0]})
+//                .delay(function(d){return d.delay = Math.random() * t()[0]})
+                .ease(yEase.value())
                 .attr({
                     cy: function(d){
-//                        return d.y + (Math.random() - 0.5) * height/5
+                        if(!d.step) d.step = new Array(2);
+                        d.step[1] = s+1;
                         return (1+3*Math.random())*height*0.2
                     }
-                }))
+                })
+                .each("interrupt.step", function(d, i){
+                    console.log(i + " interrupted y at " + d.step[1])
+                    d.step[1] -= 1;
+                })
+                .each("end.step", function(d){d.step[1] -= 1}))
         },shadowNodes)
 
+            // add a cleanup on the last transition in the chain
             .call(cleanUp, "py", "cy");
 
         function cleanUp(selection, getter, attribute){
-            selection.each("end.each", function(d, i){
+            // replace the getters on the data elements with scalar values
+            selection.each("end.each", function(d, i) {
                 var n = d3.select(this);
                 Object.defineProperty(shadowedData[i], getter, {
                     value: +n.attr(attribute), writable: true
                 });
             })
+                // remove the shadow nodes after all their last transitions completes
                 .call(endAll, function(){
                     transitions.remove();
                 }, "move-node");
