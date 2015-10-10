@@ -47,7 +47,7 @@
 <script src="https://rawgit.com/cool-Blue/d3-lib/master/inputs/number/input-number.js" charset="UTF-8"></script>
 <div id="input-div">
     <button onclick = 'positionnodes()'> select the nodes to include then click me</button>
-    steps <input id="steps-selector" onchange = 'positionnodes()' type="number"  name="steps" value = 10 min="1" max="100"/>
+    steps <input id="steps-selector" onchange = 'positionnodes()' type="number"  name="steps" value = 5 min="1" max="100"/>
 </div>
 <div id="vis"></div>
 <script>
@@ -123,7 +123,7 @@
         }),
         t = d3.ui.number({
             attributes: {
-                varying: [{name: "tx", value: 5}, {name: "ty", value: 5}],
+                varying: [{name: "tx", value: 1}, {name: "ty", value: 1}],
                 uniform: {min: 0.5, max: 10, step: 0.5}
             },
             events: {
@@ -138,7 +138,7 @@
 
     var force = d3.layout.force()
         .size([width, height])
-        .charge(-400)
+        .charge(-600)
         .linkDistance(40)
     .on("tick", tick);
 
@@ -190,7 +190,7 @@
         });
 
         node.attr("transform", function(d){return "translate(" + [d.x, d.y] + ")"})
-        force.alpha(0.1)
+//        force.alpha(0.1)
     }
 
     function dblclick(d) {
@@ -203,7 +203,12 @@
 
 
     function positionnodes(){
-        var ns = "CB:emit/drag/transition/or-whatever-you-feel-like",
+        // reset the groups in the endAll detector
+        var endAll = d3.cbTransition.endAll(),
+
+            // set up a structure of privately namespaced elements as transition proxies
+            // for the nodes with move set to true and bind to the same data
+            ns = "CB:emit/drag/transition/or-whatever-you-feel-like",
             transitions = d3.select("body").selectAll("transitions")
                 .data([graph.nodes.filter(function(d){return d.move})]),
             transitionsEnter = transitions.enter().append(function(){
@@ -216,14 +221,17 @@
             return document.createElementNS(ns, "emitDrag")
         });
 
+        //
         shadowNodes.each(function(d, i){
-            var n = d3.select(this);
-            shadowedData[i] = d;
-            dragstart.call(node.filter(function(s){return s === d;}).node(), d),
-            endAll = d3.cbTransition.endAll();
+            // mark the selected nodes
+            dragstart.call(node.filter(function(s){return s === d;}).node(), d);
 
+            // select the proxy
+            var n = d3.select(this);
+            // and align it to the current position of the selected node
             n.attr({cx: d.x, cy: d.y});
 
+            // redirect the selected node data to the attributes of the transition proxies
             Object.defineProperties(d, {
                 px: {
                     get: function() {return d.x = +n.attr("cx")},
@@ -237,10 +245,13 @@
         });
 
         force.start();
+
+        // create a chain of transitions on the shadow nodes cx attributes
         d3.range(steps()).reduce(function(o, s){
             return (o.transition("cx" + Date.now())
+                .duration(function(d){return d.delay = Math.random() * t()[0]})
+                .transition()
                 .duration(function(d){return d.duration = Math.random() * t()[0]})
-//                .delay(function(d){return d.delay = Math.random() * t()[0]})
                 .ease(xEase.value())
                 .attr({
                     cx: function(d) {
@@ -261,8 +272,11 @@
 
         d3.range(steps()).reduce(function(o, s){
             return (o.transition("cy" + Date.now())
+                // nop transition for delay
+                .duration(function(d){return d.delay = Math.random() * t()[0]})
+                // operative transition
+                .transition()
                 .duration(function(d){return d.duration = Math.random() * t()[0]})
-//                .delay(function(d){return d.delay = Math.random() * t()[0]})
                 .ease(yEase.value())
                 .attr({
                     cy: function(d){
@@ -285,7 +299,7 @@
             // replace the getters on the data elements with scalar values
             selection.each("end.each", function(d, i) {
                 var n = d3.select(this);
-                Object.defineProperty(shadowedData[i], getter, {
+                Object.defineProperty(d, getter, {
                     value: +n.attr(attribute), writable: true
                 });
             })
@@ -295,6 +309,73 @@
                 }, "move-node");
 
         }
+
+        function mapTransitions(_, j){
+            var n = this,
+                transitions = Object.keys(n).filter(function(k){return k.match(/^__transition/)}),
+                stops = transitions.map(function(k){return n[k]}),
+                chains = stops.map(function(s){
+                    return Object.keys(s).filter(function(k){
+                        return k.match(/\d+/)
+                    })
+                }).map(function(c, i){
+                    return c.map(function(t){
+                        var s = stops[i][t];
+                        return {
+                            delay: s.delay,
+                            duration: s.duration,
+                            time: new Date(s.time).getMilliseconds(),
+                            nop: !s.event
+                        }
+                    })
+                }),
+
+                x = d3.scale.linear()
+                    .range([10, width])
+                    .domain([
+                        d3.min(chains, function(stop) {
+                            return d3.min(stop, function(t) {return t.delay})
+                        }), d3.max(chains, function(stop) {
+                            return d3.max(stop, function(t) {return t.delay + t.duration})
+                        })
+                    ]),
+                timeLines = svg.selectAll(".move-nodes").data(chains);
+            timeLines.enter().append("g")
+                .attr({
+                    class: "move-nodes",
+                    transform: function(d, i){
+                        return "translate(10," + (i * 20 + j * 40 + 10) + ")"
+                    }
+                });
+            var timeSegments = timeLines.selectAll(".segments").data(function(d){return d});
+            timeSegments.enter().append("rect")
+                .attr({
+                    class: "segments",
+                    fill: "blue", opacity: function(d){return d.nop ? 0 : 0.6},
+                    height: 10
+                });
+            timeSegments.attr({
+                x: function(d){
+                    console.log([[d.delay, d.duration], [x(d.delay), x(d.duration + x.invert(0))]]
+                        .map(function(s){
+                            var f = d3.format("6.4f");
+                            return s.map(f).join("\t")
+                        }).join("\t"))
+                    return x(d.delay)
+                },
+                width: function(d){
+                    return x(d.duration + x.invert(0))
+                }
+            });
+            var mark = timeLines.selectAll(".mark").data([0]);
+            mark.enter().append("line")
+                .attr({x1: x.range()[0], x2: x.range()[0], y2: 30, stroke: "black", "stroke-width": 1,
+                class: "mark"});
+            mark.attr({x1: x.range()[0], x2: x.range()[0]})
+                .transition().delay(x.domain()[0]).duration(x.domain()[1]).ease("linear")
+                .attr({x1: x.range()[1]-1, x2: x.range()[1]-1})
+        };
+        shadowNodes.each(mapTransitions);
     }
     positionnodes()
 </script>
