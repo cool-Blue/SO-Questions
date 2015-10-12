@@ -47,6 +47,9 @@
         .tick text {
             font-size: 10px;
         }
+        #timeDisplay {
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -146,6 +149,7 @@
         });
 
     var colors = d3.scale.category10();
+    graph.nodes.forEach(function(d, i){d.color = colors(i)})
 
     var force = d3.layout.force()
         .size([width, height])
@@ -190,7 +194,16 @@
         });
     //});
 
+    var updated = false;
+
     function tick() {
+
+        if(updated){
+            if(updated === 2) window.setTimeout(function(){updated = false}, 200)
+            updated = 1;
+            console.log("tick: current x: " + getMarker().attr("x1"));
+        }
+
         link.attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
@@ -209,7 +222,7 @@
     }
 
     function dragstart(d, i) {
-        d3.select(this).classed("fixed", d.move = true).style("fill", colors(i));
+        d3.select(this).classed("fixed", d.move = true).style("fill", d.color);
     }
 
 
@@ -236,7 +249,6 @@
         shadowNodes.each(function(d, i){
             // mark the selected nodes
             var fixedNode;
-            d.color = colors(i);
             dragstart.call((fixedNode = node.filter(function(s){return s === d;})).node(), d);
             fixedNode.style("fill", d.color)
 
@@ -265,9 +277,13 @@
         // create a chain of transitions on the shadow nodes cx attributes
         d3.range(steps()).reduce(function(o, s){
             return (o.transition("cx")
-                .duration(function(d){return d.delay = (Math.random() * tms()).toFixed()})
+                .duration(function(d){
+                    return d.delay = (Math.random() * tms()).toFixed()
+                })
                 .transition()
-                .duration(function(d){return d.duration = (Math.random() * tms()).toFixed()})
+                .duration(function(d){
+                    return d.duration = (Math.random() * tms()).toFixed()
+                })
                 .ease(xEase.value())
                 .attr({
                     cx: function(d) {
@@ -330,26 +346,28 @@
 
         function mapTransitions(selection){
             // build a data structure for the transitions on the proxy nodes
-            var size = {h: 10, leading: 10, margin: {left: 10, right: 10, top: 40}},
+            var size = {h: 10, leading: 10,
+                    margin: {left: 30, right: 30, top: 40, get width(){return width - this.right}}},
                 timeData = [], colors = [];
             selection.each(function(){
                 var n = this,
-                    transitions = Object.keys(n).filter(function(k){return k.match(/^__transition/)}),
-                    stops = transitions.map(function(k){return n[k]}),
-                    chains = stops.map(function(s){
-                        return Object.keys(s).filter(function(k){
+                    transitionKeys = Object.keys(n).filter(function(k){return k.match(/^__transition/)}),
+                    transitions = transitionKeys.map(function(k){return n[k]}),
+                    locks = transitions.map(function(trans){
+                        return Object.keys(trans).filter(function(k){
                             return k.match(/\d+/)
                         })
-                    }).map(function(c, i){
-                        return c.map(function(t){
-                            var s = stops[i][t];
+                    }).map(function(lockKeys, i){
+                        return lockKeys.map(function(index){
+                            var l = transitions[i][index];
                             return {
-                                delay: s.delay,
-                                duration: s.duration,
-                                time: s.time, //new Date(s.time).getMilliseconds(),
-                                t0: s.time + s.delay,
-                                t1: s.time + s.delay + s.duration,
-                                nop: !s.event,
+                                delay: l.delay,
+                                duration: l.duration,
+                                time: l.time, //new Date(s.time).getMilliseconds(),
+                                t0: l.time + l.delay,
+                                t1: l.time + l.delay + l.duration,
+                                nop: !l.event,
+
                                 h: size.h,
                                 y: 0,
                                 overlaps: function(seg2){
@@ -362,13 +380,13 @@
                             }
                         })
                     });
-                timeData.push(chains);
+                timeData.push(locks);
                 colors.push(d3.select(this).datum().color)
             });
 
             // build a visualisation based on the data structure
-            var x = d3.scale.linear()
-                    .range([size.margin.left, width - size.margin.right])
+            var t = d3.time.scale()
+                    .range([0, size.margin.width])
                     // find the min delay and the maximum finish time for all transitions
                     .domain([
                         d3.min(timeData, function(nodes) {
@@ -386,35 +404,36 @@
                             })
                         })
                     ]),
-                t = d3.time.scale()
-                    .range(x.range())
-                    .domain([x.domain()[0], x.domain()[1]]),
-                tAxis = d3.svg.axis().scale(t).orient("top").tickFormat(d3.time.format("%H:%M:%S:%L")),
+                // record the time interval, before nicing the domain
+                timeInterval = t.domain();
+            t.nice();
+            var tAxis = d3.svg.axis().scale(t).orient("top").tickFormat(d3.time.format("%H:%M:%S:%L")),
 
                 // outer wrapper
                 timeDisplay = svg.selectAll("#timeDisplay").data([timeData]);
             timeDisplay.enter().append("g")
                 .attr({
-                    id: "timeDisplay"
+                    id: "timeDisplay",
+                    transform: "translate(" + [size.margin.left, size.margin.top] + ")"
                 })
                 .append("g")
                 .attr({
                     id: "xAxis",
-                    transform: "translate(0," + (size.margin.top - size.leading) + ")"
+                    transform: "translate(0," +  -size.leading + ")"
                 });
             timeDisplay.exit().remove();
 
             // node wrappers
-            var nodes = timeDisplay.selectAll(".node").data(function(d){return d});
+            var nodes = timeDisplay.selectAll(".node-timeline").data(function(d){return d});
             nodes.exit().remove();
             nodes.enter().append("g")
                 .attr({
-                    class: "node",
+                    class: "node-timeline",
                     fill: function(d, i){return colors[i]}
                 });
             nodes.attr({
                 transform: function(d, i){
-                    return "translate(0," + (i * (2*(size.h + size.leading)) + size.margin.top) + ")"
+                    return "translate(0," + (i * (2*(size.h + size.leading))) + ")"
                 }
             });
 
@@ -430,34 +449,37 @@
             // a line segment for each transition
             // width scale
             var w = d3.scale.linear()
-                .range(x.range().map(function(d){
-                    return d - x.range()[0];
+                .range(t.range().map(function(d){
+                    return d - t.range()[0];
                 }))
-                .domain(x.domain().map(function(d){
-                    return d - x.domain()[0];
+                .domain(t.domain().map(function(d){
+                    return d - t.domain()[0];
                 }));
 
-            var timeSegments = timeLines.selectAll(".segment").data(function(d){return d});
+            var timeSegments = timeLines.selectAll(".segment")
+                .data(function(d){return d}, function(d){return d.time + "_" + d.delay + "_" + d.duration});
+            timeSegments.attr({opacity: 0.6, stroke: "none"})
             timeSegments.exit().remove();
             timeSegments.enter().append("rect")
                 .attr({
                     class: "segment",
+                    opacity: function(d){return d.nop ? 0 : 0.8},
+                    stroke: "black"
                 });
             timeSegments
                 .transition("x").duration(1000)
                 .attr({
                 x: function(d){
-                    return x(d.t0)
+                    return t(d.t0)
                 },
                 width: function(d){
                     return w(d.duration)
-                },
-                opacity: function(d){return d.nop ? 0 : 0.6},
+                }
             });
 
             // offset colliding segments
             timeLines
-                .each(function(d){
+                .each(function(){
                     var segments = d3.select(this).selectAll(".segment");
                     segments.each(function(s1, i){
                         if(!s1.nop) {
@@ -493,35 +515,55 @@
                         })
                     })
                 }),
-                mark = nodes.selectAll(".mark").data([{scales: {x: x.copy(), t: t.copy()}}], function(d){
+                mark = nodes.selectAll(".mark").data([{scales: {t: t.copy()}}], function(d){
                     if(!Array.isArray(this)) oldScales = d.scales;
                     return d;
                 });
             mark.enter().append("line")
-                .attr({y2: 2*(size.h + size.leading) + size.margin.top, stroke: "black", "stroke-width": 1,
+                .attr({y2: 2*(size.h + size.leading), stroke: "black", "stroke-width": 1,
                 class: "mark"});
-            var currentX = x((mark.attr("running") ? oldScales.x.invert(mark.attr("x1")) : 0) + startTime);
+            var currentX = mark.attr("running") ?
+                           t(timeInterval[0] = oldScales.t.invert(mark.attr("x1"))) :
+                           t(timeInterval[0]);
             console.log("current time : "
-                + d3.time.format("%H:%M:%S:%L")((oldScales && oldScales.t || t).invert(mark.attr("x1"))));
-//            console.log("oldScale\t" + (oldScale ? oldScale.domain() : "not set"))
+                + d3.time.format("%H:%M:%S:%L")((oldScales && oldScales.t || t).invert(mark.attr("x1")))
+            + "\tcurrent x: " + mark.attr("x1") + "\tnew x: " + currentX);
+            //            console.log("oldScale\t" + (oldScale ? oldScale.domain() : "not set"))
 //            console.log("currentX\t" + x.domain()); console.log();
 //            console.log("\tdelta\t" + x.domain().map(function(d, i){
 //                    return oldScale ? d - oldScale.domain()[i] : "n/a";
 //                })); console.log();
+            currentX = currentX < 0 ? t(timeInterval[0]) : currentX;
 
-                mark.attr({x1: currentX, x2: currentX})
-                .transition().delay(x.domain()[0] - startTime).duration(x.domain()[1] - startTime).ease("linear")
-                .attr({x1: x.range()[1], x2: x.range()[1]})
-                    .each("start", function(){mark.attr({running: true})})
-                    .each("interrupt", function(){console.log("marker interrupted")})
-                    .each("end", function(){mark.attr({running: null})});
+                mark.attr({x1: currentX, x2: currentX}).interrupt()
+                .transition().duration(timeInterval[1] - timeInterval[0]).ease("linear")
+                .attr({x1: t(timeInterval[1]), x2: t(timeInterval[1])})
+                    .each("start", function(){
+                        console.log(["\tmarker start", d3.select(this).attr("x1"),
+                                     d3.time.format("%H:%M:%S:%L")(new Date())].join("\t"))
+                        mark.attr({running: true})
+                    })
+                    .each("interrupt", function(){
+//                        mark.attr({x1: currentX, x2: currentX});
+                        console.log("marker interrupted\t" + d3.select(this).attr("x1"))
+                    })
+                    .each("end", function(){
+                        mark.attr({running: null})
+                        console.log(["\tmarker end", d3.select(this).attr("x1"),
+                        d3.time.format("%H:%M:%S:%L")(new Date())].join("\t"))
+                    });
 
             timeDisplay.select("#xAxis").call(tAxis);
 
+            selection.getMarker = function(){return mark;}
+
         }
+
+        updated = 2;
+
         return shadowNodes.call(mapTransitions);
     }
-    var clearSegments = positionnodes()
+    var getMarker = positionnodes().getMarker
 </script>
 </body>
 </html>
