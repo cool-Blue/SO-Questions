@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>http://stackoverflow.com/questions/33087405/using-queue-to-load-multiple-files-and-assign-to-globals</title>
+</head>
+<body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script src="https://rawgit.com/mbostock/queue/master/queue.js"></script>
+
+<script>
+    var origins = [],
+        geoJSON = [];
+
+    queue(1)
+        .defer(function(url, callback) {
+            d3.csv(url, function(error, d) {
+                if(!error) geoJSON.push(d.map(function(o){return o.col1}));
+                callback(error, d);
+            })
+        }, "data.csv")
+        .defer(function(url, callback) {
+            d3.json(url, function(error, d) {
+                if(!error) geoJSON.push(d.col2);
+                callback(error, d);
+            })
+        }, "data.json")
+        .await(ready);
+
+    function ready(error, csvData, jsonData) {
+        if(!error) {
+            geoJSON.push(csvData.map(function(o){return o.col2}));
+            geoJSON.push(jsonData.col3);
+        }
+        return console.log(error ? "error: " + error.responseText : geoJSON);
+    }
+
+    queue(1)
+        .defer(d3.csv, "path_to.csv")
+        .defer(d3.json, "path_to.json")
+        .await(ready);
+
+    function ready(error, csvData, jsonData) {
+        if(error) return console.log("error: " + error.responseText);
+        origins.push(csvData.o_geoid);
+        // Limit GeoJSON features to those in CSV
+        for(var i = jsonData.features.length - 1; !error && i >= 0; i--) {
+            if($.inArray(jsonData.features[i].properties['GEOID10'], origins) != -1) {
+                geoJSON.features.push(jsonData.features[i]);
+            }
+        }
+    }
+
+</script>
+</body>
+</html>
